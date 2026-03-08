@@ -11,6 +11,7 @@ from enum import Enum
 from .vision_api_client import VisionAPIClient, APIRequest, APIProvider
 from ..utils.exceptions import ValidationError
 from ..utils.logger import get_logger
+from ..utils.config import load_config
 
 
 class TaskType(Enum):
