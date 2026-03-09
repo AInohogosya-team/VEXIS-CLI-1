@@ -9,7 +9,7 @@
 
 **AI-Powered Command Line Interface for Intelligent Automation**
 
-[VEXIS-CLI-1](https://github.com/AInohogosya-team/VEXIS-CLI-1) is a sophisticated AI agent that brings the power of large language models to your terminal, enabling intelligent task automation, natural language command processing, and seamless workflow integration.
+[VEXIS-CLI-1](https://github.com/AInohogosya-team/VEXIS-CLI-1) is an AI agent derived from VEXIS-1.1 that performs tasks through command execution. It leverages large language models to intelligently interpret natural language commands and execute them through terminal operations, enabling automated workflow management and system administration.
 
 [Quick Start](#quick-start) • [Documentation](#documentation) • [Models](#supported-ai-models) • [Configuration](#configuration) • [Contributing](#contributing)
 
@@ -122,50 +122,6 @@ VEXIS-CLI-1 supports **80+ models** from **12 major providers**:
 
 </details>
 
-## Configuration
-
-### Basic Configuration
-
-Edit `config.yaml` to customize your experience:
-
-```yaml
-api:
-  preferred_provider: "ollama"
-  local_endpoint: "http://localhost:11434"
-  local_model: "llama3.2:latest"
-  timeout: 120
-
-verification:
-  enabled: true
-  confidence_threshold: 0.8
-  max_verification_attempts: 3
-
-engine:
-  click_delay: 0.1
-  typing_delay: 0.05
-  screenshot_quality: 95
-```
-
-### Environment Variables
-
-Override configuration with environment variables:
-
-```bash
-export AI_AGENT_LOCAL_ENDPOINT="http://localhost:11434"
-export AI_AGENT_PREFERRED_PROVIDER="ollama"
-export AI_AGENT_LOCAL_MODEL="llama3.2:latest"
-```
-
-### Model Selection
-
-Switch between models dynamically:
-
-```bash
-# Use a specific model
-vexis-cli --model deepseek-coder "Review this Python code"
-
-# Use cloud model
-vexis-cli --model gpt-4o "Analyze this system architecture"
 ```
 
 ## Usage Examples
