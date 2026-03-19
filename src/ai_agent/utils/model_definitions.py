@@ -532,14 +532,28 @@ MODEL_FAMILIES = {
         "icon": "🚀",
         "priority": 15,
         "subfamilies": {
-            "minimax": {
-                "name": "MiniMax",
-                "description": "MiniMax large language models for productivity and coding",
-                "icon": "🚀",
+            "minimax-latest": {
+                "name": "Latest Models",
+                "description": "Most recent MiniMax models with cutting-edge capabilities",
+                "icon": "�",
                 "models": {
-                    "minimax-m2.7:cloud": {"name": "MiniMax M2.7 (New)", "desc": "First M2-series model • Agent teams • Complex skills • 200K context • Cloud only", "icon": "🔥"},
-                    "minimax-m2.5:cloud": {"name": "MiniMax M2.5 Cloud", "desc": "State-of-the-art • Productivity & coding • Cloud only", "icon": "🌟"},
-                    "minimax-m2:cloud": {"name": "MiniMax M2 Cloud", "desc": "High efficiency • Coding & agentic • Cloud only", "icon": "🧠"},
+                    "minimax-m2.7:cloud": {"name": "MiniMax M2.7 (Latest)", "desc": "First M2-series model • Agent teams • Complex skills • 200K context • Cloud only", "icon": "🔥"},
+                }
+            },
+            "minimax-productivity": {
+                "name": "Productivity Models",
+                "description": "High-performance models for productivity and coding tasks",
+                "icon": "⚡",
+                "models": {
+                    "minimax-m2.5:cloud": {"name": "MiniMax M2.5", "desc": "State-of-the-art • Productivity & coding • Cloud only", "icon": "🌟"},
+                }
+            },
+            "minimax-legacy": {
+                "name": "Legacy Models",
+                "description": "Previous generation MiniMax models",
+                "icon": "📚",
+                "models": {
+                    "minimax-m2:cloud": {"name": "MiniMax M2 (Legacy)", "desc": "High efficiency • Coding & agentic • Cloud only • Previous generation", "icon": "🧠"},
                 }
             }
         }

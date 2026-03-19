@@ -26,6 +26,7 @@ class ProviderType(Enum):
     COHERE = "cohere"
     DEEPSEEK = "deepseek"
     TOGETHER = "together"
+    MINIMAX = "minimax"
 
 
 class ResponseFormat(Enum):

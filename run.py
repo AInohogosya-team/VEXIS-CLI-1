@@ -349,9 +349,9 @@ def show_help():
     print("This script automatically handles:")
     print("  • Virtual environment creation and management")
     print("  • Dependency installation")
-    print("  • Model selection (13 AI providers with model options)")
+    print("  • Model selection (14 AI providers with model options)")
     print("    - Local: Ollama (privacy-focused)")
-    print("    - Cloud: OpenAI, Anthropic, Google, xAI, Meta, Groq, DeepSeek, Together, Microsoft, Mistral, Amazon, Cohere")
+    print("    - Cloud: OpenAI, Anthropic, Google, xAI, Meta, Groq, DeepSeek, Together, Microsoft, Mistral, Amazon, Cohere, MiniMax")
     print("  • Cross-platform compatibility")
     print("  • Self-bootstrapping")
     print("  • Environment detection and adaptive execution")
@@ -370,6 +370,7 @@ def show_help():
     print("  🌍 Mistral AI: Multilingual models - Beta")
     print("  🏭 Amazon Bedrock: Titan/Nova models via AWS - Beta")
     print("  🏢 Cohere: Command models for enterprise - Beta")
+    print("  🚀 MiniMax: M2-series models for productivity - Beta")
     print()
     print("Environment Commands:")
     print("  --check, -c         Run environment check and show recommendations")
@@ -591,7 +592,8 @@ def show_config_summary(provider: str, model: str = None):
         "microsoft": ("Microsoft Azure API", model or settings_manager.get_microsoft_model()),
         "mistral": ("Mistral Official API", model or settings_manager.get_mistral_model()),
         "amazon": ("Amazon Bedrock API", model or settings_manager.get_amazon_model()),
-        "cohere": ("Cohere Official API", model or settings_manager.get_cohere_model())
+        "cohere": ("Cohere Official API", model or settings_manager.get_cohere_model()),
+        "minimax": ("MiniMax Official API", model or settings_manager.get_minimax_model())
     }
     
     if provider in provider_info:
@@ -628,6 +630,11 @@ def format_model_display_name(provider: str, model: str) -> str:
             "claude-3-opus-20240229": "Claude 3 Opus",
             "claude-3-sonnet-20240229": "Claude 3 Sonnet",
             "claude-3-haiku-20240307": "Claude 3 Haiku"
+        },
+        "minimax": {
+            "minimax-m2.7": "MiniMax M2.7 (Latest)",
+            "minimax-m2.5": "MiniMax M2.5",
+            "minimax-m2": "MiniMax M2 (Legacy)"
         }
     }
     
@@ -973,6 +980,13 @@ def select_model_provider():
         "🏢"
     )
     
+    menu.add_item(
+        "MiniMax (Beta)",
+        "Use MiniMax's M2-series models • Requires API key",
+        "minimax",
+        "🚀"
+    )
+    
     selected_provider = menu.show()
     
     if selected_provider is None:
@@ -1004,7 +1018,7 @@ def select_model_provider():
         show_config_summary(provider, model)
         return "google"
         
-    elif selected_provider in ["openai", "anthropic", "xai", "meta", "groq", "deepseek", "together", "microsoft", "mistral", "amazon", "cohere"]:
+    elif selected_provider in ["openai", "anthropic", "xai", "meta", "groq", "deepseek", "together", "microsoft", "mistral", "amazon", "cohere", "minimax"]:
         # Generic handler for all other providers
         provider, model = configure_generic_provider(selected_provider)
         if provider is None:
@@ -1050,7 +1064,8 @@ def configure_generic_provider(provider_name):
         "microsoft": ["gpt-5.4", "gpt-5.4-pro", "gpt-4o"],
         "mistral": ["mistral-large-2411", "mistral-small-2409"],
         "amazon": ["anthropic.claude-opus-4.6-v1:0", "anthropic.claude-sonnet-4.6-v1:0"],
-        "cohere": ["command-r-plus-08-2024", "command-r-08-2024"]
+        "cohere": ["command-r-plus-08-2024", "command-r-08-2024"],
+        "minimax": ["minimax-m2.7 (Latest)", "minimax-m2.5", "minimax-m2 (Legacy)"]
     }
     
     # API key environment variables
@@ -1065,7 +1080,8 @@ def configure_generic_provider(provider_name):
         "microsoft": "AZURE_API_KEY",
         "mistral": "MISTRAL_API_KEY",
         "amazon": "AWS_ACCESS_KEY_ID",
-        "cohere": "COHERE_API_KEY"
+        "cohere": "COHERE_API_KEY",
+        "minimax": "MINIMAX_API_KEY"
     }
     
     info_message(f"🔑 Configuring {provider_name.upper()} Provider")

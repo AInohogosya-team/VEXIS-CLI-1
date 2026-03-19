@@ -26,6 +26,7 @@ Providers:
     - DeepSeek (OpenAI-compatible)
     - Groq (OpenAI-compatible)
     - Together AI (OpenAI-compatible)
+    - MiniMax (OpenAI-compatible)
     
 Adding New Providers:
     1. Create a new file (e.g., api/anthropic_client.py)
@@ -105,6 +106,11 @@ try:
 except ImportError as e:
     TogetherLLMClient = None  # type: ignore
 
+try:
+    from .minimax_client import MiniMaxLLMClient
+except ImportError as e:
+    MiniMaxLLMClient = None  # type: ignore
+
 
 # Register providers with factory
 if GoogleLLMClient:
@@ -143,6 +149,9 @@ if GroqLLMClient:
 if TogetherLLMClient:
     LLMFactory.register(ProviderType.TOGETHER, TogetherLLMClient)
 
+if MiniMaxLLMClient:
+    LLMFactory.register(ProviderType.MINIMAX, MiniMaxLLMClient)
+
 
 __all__ = [
     # Base classes
@@ -167,6 +176,7 @@ __all__ = [
     "DeepSeekLLMClient",
     "GroqLLMClient",
     "TogetherLLMClient",
+    "MiniMaxLLMClient",
 ]
 
 
@@ -213,6 +223,7 @@ def create_client(
         "deepseek": ProviderType.DEEPSEEK,
         "groq": ProviderType.GROQ,
         "together": ProviderType.TOGETHER,
+        "minimax": ProviderType.MINIMAX,
     }
     
     provider_type = provider_map.get(provider.lower())
@@ -230,5 +241,5 @@ def get_available_providers() -> list:
     return [
         "google", "openai", "anthropic", "xai", "meta", 
         "mistral", "microsoft", "amazon", "cohere", 
-        "deepseek", "groq", "together"
+        "deepseek", "groq", "together", "minimax"
     ]

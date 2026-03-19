@@ -28,6 +28,7 @@ class APISettings:
     cohere_api_key: Optional[str] = None
     deepseek_api_key: Optional[str] = None
     together_api_key: Optional[str] = None
+    minimax_api_key: Optional[str] = None
     preferred_provider: str = ""  # Must be explicitly set by user
     save_api_key: bool = True
     google_model: str = "gemini-3.1-pro"
@@ -42,6 +43,7 @@ class APISettings:
     cohere_model: str = "command-r-plus-08-2024"
     deepseek_model: str = "deepseek-r1"
     together_model: str = "meta-llama/Llama-4-Scout-17B-Instruct"
+    minimax_model: str = "minimax-m2.7"
     ollama_model: str = "llama3.2:latest"
 
 
@@ -381,11 +383,30 @@ class SettingsManager:
     def get_together_model(self) -> str:
         return self._settings.together_model
     
+    # MiniMax methods
+    def set_minimax_api_key(self, api_key: str, save_key: bool = True):
+        self._settings.minimax_api_key = api_key
+        self._settings.save_api_key = save_key
+        self._save_settings()
+    
+    def get_minimax_api_key(self) -> Optional[str]:
+        return self._settings.minimax_api_key
+    
+    def has_minimax_api_key(self) -> bool:
+        return bool(self._settings.minimax_api_key)
+    
+    def set_minimax_model(self, model: str):
+        self._settings.minimax_model = model
+        self._save_settings()
+    
+    def get_minimax_model(self) -> str:
+        return self._settings.minimax_model
+    
     def set_preferred_provider(self, provider: str):
         """Set preferred provider"""
         valid_providers = ["ollama", "google", "groq", "openai", "anthropic", 
                           "xai", "meta", "mistral", "microsoft", "amazon", 
-                          "cohere", "deepseek", "together"]
+                          "cohere", "deepseek", "together", "minimax"]
         if provider not in valid_providers:
             raise ValueError(f"Provider must be one of: {valid_providers}")
         self._settings.preferred_provider = provider
@@ -406,7 +427,8 @@ class SettingsManager:
             "amazon": "amazon_access_key",
             "cohere": "cohere_api_key",
             "deepseek": "deepseek_api_key",
-            "together": "together_api_key"
+            "together": "together_api_key",
+            "minimax": "minimax_api_key"
         }
         
         if provider not in provider_key_map:
@@ -431,7 +453,8 @@ class SettingsManager:
             "amazon": "amazon_model",
             "cohere": "cohere_model",
             "deepseek": "deepseek_model",
-            "together": "together_model"
+            "together": "together_model",
+            "minimax": "minimax_model"
         }
         
         if provider not in provider_model_map:
@@ -455,7 +478,8 @@ class SettingsManager:
             "amazon": "amazon_access_key",
             "cohere": "cohere_api_key",
             "deepseek": "deepseek_api_key",
-            "together": "together_api_key"
+            "together": "together_api_key",
+            "minimax": "minimax_api_key"
         }
         
         if provider not in provider_key_map:
@@ -477,7 +501,8 @@ class SettingsManager:
             "amazon": "amazon_model",
             "cohere": "cohere_model",
             "deepseek": "deepseek_model",
-            "together": "together_model"
+            "together": "together_model",
+            "minimax": "minimax_model"
         }
         
         if provider not in provider_model_map:
