@@ -235,6 +235,10 @@ Command: REGENERATE_STEP
 Now analyze the current situation and generate the appropriate response:"""
         }
 
+    def get_template(self, task_type: TaskType) -> str:
+        """Get template for task type"""
+        return self.templates.get(task_type.value, "")
+
 
 class ModelRunner:
     """CLI Architecture Model Runner: Ollama Cloud Models"""
