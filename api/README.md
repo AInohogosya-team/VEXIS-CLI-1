@@ -490,10 +490,10 @@ response = client.generate(prompt)
 Run the examples:
 
 ```bash
-cd /Users/sasakikousei/Desktop/VEXIS-CLI-1.1.1
+cd /Users/sasakikousei/Desktop/VEXIS-CLI-1.2
 python -m api.usage_example
 ```
 
 ## License
 
-Same as VEXIS-CLI-1.1.1 project
+Same as VEXIS-CLI-1.2 project

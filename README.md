@@ -1,7 +1,7 @@
 
 <div align="center">
 
-![Betelgeuse](image.png)
+![alt text](image-1.png)
 
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue?style=flat-square&logo=python)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
@@ -15,7 +15,7 @@
 
 ## About
 
-**VEXIS-CLI-1.1** is an AI command-line agent that processes natural language instructions to execute terminal operations. Supports multiple AI providers including Ollama, Google Gemini, OpenAI, Anthropic, xAI, Meta, Mistral AI, Microsoft Azure, Amazon Bedrock, Cohere, DeepSeek, Groq, and Together AI.
+**VEXIS-CLI-1.2** is an AI command-line agent that processes natural language instructions to execute terminal operations. Supports multiple AI providers including Ollama, Google Gemini, OpenAI, Anthropic, xAI, Meta, Mistral AI, Microsoft Azure, Amazon Bedrock, Cohere, DeepSeek, Groq, and Together AI.
 
 ### AI Providers
 
@@ -61,8 +61,8 @@
 ## Installation
 
 ```bash
-git clone https://github.com/AInohogosya-team/VEXIS-CLI-1.1.git
-cd VEXIS-CLI-1.1
+git clone https://github.com/AInohogosya-team/VEXIS-CLI-1.2.git
+cd VEXIS-CLI-1.2
 python3 run.py "list files"  # Dependencies handled automatically
 ```
 
@@ -148,6 +148,6 @@ Two-phase execution engine:
 
 <div align="center">
 
-**VEXIS-CLI-1.1 - Intelligent command-line automation**
+**VEXIS-CLI-1.2 - Intelligent command-line automation**
 
 </div>

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This comprehensive API reference covers all public interfaces, classes, methods, and data structures available in VEXIS-CLI-1.1.
+This comprehensive API reference covers all public interfaces, classes, methods, and data structures available in VEXIS-CLI-1.2.
 
 ## Core Components
 
@@ -785,7 +785,7 @@ def mock_ollama_response():
 
 ### Version Compatibility
 
-This API reference covers VEXIS-CLI-1.1 version 1.0.0.
+This API reference covers VEXIS-CLI-1.2 version 1.0.0.
 
 #### Breaking Changes from 0.x
 
@@ -823,4 +823,4 @@ This API reference covers VEXIS-CLI-1.1 version 1.0.0.
    config = load_config("config.yaml")
    ```
 
-This API reference provides comprehensive documentation for all public interfaces in VEXIS-CLI-1.1, enabling developers to integrate, extend, and test the system effectively.
+This API reference provides comprehensive documentation for all public interfaces in VEXIS-CLI-1.2, enabling developers to integrate, extend, and test the system effectively.

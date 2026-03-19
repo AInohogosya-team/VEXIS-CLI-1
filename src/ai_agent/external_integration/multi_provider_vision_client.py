@@ -81,6 +81,7 @@ class APIRequest:
     temperature: float = 1.0
     model: Optional[str] = None
     provider: Optional[str] = None
+    system_instruction: Optional[str] = None
 
 
 class MultiProviderVisionAPIClient:
@@ -244,9 +245,15 @@ class MultiProviderVisionAPIClient:
     def _handle_ollama_request(self, request: APIRequest, start_time: float) -> APIResponse:
         """Handle Ollama requests"""
         try:
+            # Prepare prompt with system instructions for Ollama
+            prompt_with_system = request.prompt
+            if request.system_instruction:
+                # Prepend system instructions for Ollama since it may not support separate system messages
+                prompt_with_system = f"{request.system_instruction}\n\n{request.prompt}"
+            
             # Use existing Ollama provider logic
             ollama_response = self.ollama_provider.chat(
-                prompt=request.prompt,
+                prompt=prompt_with_system,
                 model=request.model,
                 temperature=request.temperature,
                 max_tokens=request.max_tokens
@@ -279,7 +286,8 @@ class MultiProviderVisionAPIClient:
             config = GenerationConfig(
                 max_tokens=request.max_tokens,
                 temperature=request.temperature,
-                model=request.model
+                model=request.model,
+                system_instruction=request.system_instruction
             )
             
             # Handle image data if present

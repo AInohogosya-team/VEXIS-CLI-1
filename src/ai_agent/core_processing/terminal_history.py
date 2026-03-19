@@ -121,7 +121,7 @@ class TerminalHistory:
             
             # Initialize terminal session
             # Initialize terminal session with project root as working directory
-            # Navigate to top-level directory (VEXIS-CLI-1.1) first
+            # Navigate to top-level directory (VEXIS-CLI-1.2) first
             project_root = Path(__file__).parent.parent.parent.parent
             self.terminal_session = TerminalSession(
                 session_id=self.session_id,
@@ -387,6 +387,8 @@ class TerminalHistory:
                 )
             else:
                 # On Unix-like systems, use bash for better compatibility
+                # Execute in background without creating new windows
+                # This works in both GUI and CLI environments
                 result = subprocess.run(
                     ['bash', '-c', command],
                     capture_output=True,

@@ -1,4 +1,4 @@
-# VEXIS-CLI-1.1 Detailed User Guide
+# VEXIS-CLI-1.2 Detailed User Guide
 
 ## Table of Contents
 
@@ -15,9 +15,9 @@
 
 ## Getting Started
 
-### What is VEXIS-CLI-1.1?
+### What is VEXIS-CLI-1.2?
 
-VEXIS-CLI-1.1 is an intelligent command-line agent that transforms natural language instructions into executable terminal commands. It supports multiple AI providers and offers both local (privacy-first) and cloud-based options.
+VEXIS-CLI-1.2 is an intelligent command-line agent that transforms natural language instructions into executable terminal commands. It supports multiple AI providers and offers both local (privacy-first) and cloud-based options.
 
 ### Key Features
 
@@ -35,8 +35,8 @@ VEXIS-CLI-1.1 is an intelligent command-line agent that transforms natural langu
 
 ```bash
 # Clone the repository
-git clone https://github.com/AInohogosya-team/VEXIS-CLI-1.1.git
-cd VEXIS-CLI-1.1
+git clone https://github.com/AInohogosya-team/VEXIS-CLI-1.2.git
+cd VEXIS-CLI-1.2
 
 # Run your first command (dependencies auto-installed)
 python3 run.py "list files in current directory"
@@ -46,8 +46,8 @@ python3 run.py "list files in current directory"
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/AInohogosya-team/VEXIS-CLI-1.1.git
-cd VEXIS-CLI-1.1
+git clone https://github.com/AInohogosya-team/VEXIS-CLI-1.2.git
+cd VEXIS-CLI-1.2
 
 # 2. Create virtual environment (optional but recommended)
 python3 -m venv venv
@@ -248,7 +248,7 @@ Similar setup process for:
 
 ### Two-Phase Execution Engine
 
-VEXIS-CLI-1.1 uses a sophisticated two-phase execution:
+VEXIS-CLI-1.2 uses a sophisticated two-phase execution:
 
 1. **Command Planning Phase**:
    - Natural language understanding
@@ -398,7 +398,7 @@ python3 run.py "your command" --debug
 ## Support & Community
 
 - **Documentation**: [Full docs](./docs/)
-- **Issues**: [GitHub Issues](https://github.com/AInohogosya-team/VEXIS-CLI-1.1/issues)
+- **Issues**: [GitHub Issues](https://github.com/AInohogosya-team/VEXIS-CLI-1.2/issues)
 - **Updates**: Check the repository regularly for updates
 
 ---

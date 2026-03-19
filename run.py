@@ -1024,11 +1024,22 @@ def configure_generic_provider(provider_name):
     # Provider-specific model options (updated to current 2026 models)
     provider_models = {
         "openai": [
+            # Current/Latest Models
             "gpt-5.4-mini (New)", "gpt-5.4-nano (New)", "gpt-5.4", "gpt-5.4-pro", "gpt-5-mini", "gpt-5-nano", "gpt-5", "gpt-5-pro", "gpt-5.1", "gpt-5.2", "gpt-5.2-pro",
-            "gpt-4.1", "gpt-4.1-nano", "gpt-4.1-mini", "gpt-4o", "gpt-4o-mini", "gpt-4o-search-preview", "gpt-4o-mini-search", "gpt-4.5-preview",
-            "o1", "o1-mini", "o1-pro", "o3", "o3-mini", "o3-pro", "o4-mini",
+            "o3", "o3-mini", "o3-pro", "o4-mini",
             "gpt-5-codex", "gpt-5.1-codex", "gpt-5.1-codex-max", "gpt-5.1-codex-mini", "gpt-5.2-codex", "gpt-5.3-codex",
-            "gpt-oss-20b", "gpt-oss-120b", "computer-use-preview", "omni-moderation-v1"
+            "gpt-oss-20b", "gpt-oss-120b", "computer-use-preview", "omni-moderation-v1",
+            
+            # Legacy Models (will be categorized)
+            "gpt-4.1", "gpt-4.1-nano", "gpt-4.1-mini", "gpt-4o", "gpt-4o-mini", "gpt-4o-search-preview", "gpt-4o-mini-search", "gpt-4.5-preview",
+            "gpt-4-turbo", "gpt-4-turbo-preview", "gpt-4-32k", "gpt-4-0314", "gpt-4-0125-preview",
+            "gpt-3.5-turbo", "gpt-3.5-turbo-0301", "gpt-3.5-turbo-0613", "gpt-3.5-turbo-16k-0613", "gpt-3.5-turbo-instruct",
+            "o1", "o1-mini", "o1-pro", "o1-preview",
+            "code-davinci-002", "code-davinci-001", "code-cushman-002", "code-cushman-001",
+            "ada", "babbage", "curie", "davinci", "text-davinci-001", "text-davinci-002", "text-davinci-003",
+            "text-ada-001", "text-babbage-001", "text-curie-001",
+            "text-moderation", "text-moderation-007", "text-moderation-latest", "text-moderation-stable",
+            "codex-mini-latest"
         ],
         "anthropic": ["claude-opus-4.6", "claude-sonnet-4.6", "claude-sonnet-4.5"],
         "xai": ["grok-4.20", "grok-4.20-beta"],
@@ -1093,8 +1104,12 @@ def configure_generic_provider(provider_name):
 
 
 def select_model_with_arrows(provider_name: str, models: list) -> Optional[str]:
-    """Select model using arrow keys in a curses menu"""
+    """Select model using arrow keys in a curses menu with categorization"""
     from ai_agent.utils.curses_menu import get_curses_menu
+    
+    # Categorize models for OpenAI provider
+    if provider_name.lower() == "openai":
+        return select_openai_model_with_categories(models)
     
     menu = get_curses_menu(
         f"🤖 {provider_name.upper()} Model Selection",
@@ -1185,6 +1200,342 @@ def select_model_with_arrows(provider_name: str, models: list) -> Optional[str]:
     
     selected_model = menu.show()
     return selected_model
+
+
+def select_openai_model_with_categories(models: list) -> Optional[str]:
+    """Select OpenAI model using categorized menu"""
+    from ai_agent.utils.curses_menu import get_curses_menu
+    
+    menu = get_curses_menu(
+        "🤖 OpenAI Model Selection",
+        "Choose your preferred OpenAI model:"
+    )
+    
+    # Separate models by category
+    latest_models = []
+    legacy_models = []
+    
+    for model in models:
+        if model in ["gpt-5.4", "gpt-5.4-mini (New)", "gpt-5.4-nano (New)", "gpt-5.4-pro", "gpt-5.3-codex", "gpt-oss-20b", "gpt-oss-120b"]:
+            latest_models.append(model)
+        else:
+            legacy_models.append(model)
+    
+    # Debug: Print model categorization
+    print(f"\n[DEBUG] Total models: {len(models)}")
+    print(f"[DEBUG] Latest models: {len(latest_models)}")
+    print(f"[DEBUG] Legacy models: {len(legacy_models)}")
+    
+    # Add latest models directly to menu (no category)
+    for model in latest_models:
+        description = get_model_description(model)
+        if "new" in description.lower():
+            icon = "✨"  # Special icon for new models
+        elif "latest" in description.lower() or "newest" in description.lower():
+            icon = "🚀"
+        else:
+            icon = "🧠"
+        menu.add_item(model, description, model, icon)
+    
+    # Add Legacy Models category (all legacy models in one category)
+    if legacy_models:
+        menu.add_item(
+            "� Legacy Models",
+            f"Older models organized by type ({len(legacy_models)} models)",
+            "category_legacy",
+            "�"
+        )
+    
+    selected_category = menu.show()
+    
+    if selected_category == "category_legacy":
+        return show_models_with_subcategories("Legacy Models", legacy_models, "📚")
+    elif selected_category in latest_models:
+        return selected_category
+    else:
+        return None
+
+
+def get_model_description(model: str) -> str:
+    """Get description for a specific model"""
+    model_descriptions = {
+        # GPT-5 Series
+        "gpt-5.4-mini (New)": "GPT-5.4 Mini • New • Cost-optimized • Fast inference",
+        "gpt-5.4-nano (New)": "GPT-5.4 Nano • New • Ultra-lightweight • Edge devices",
+        "gpt-5.4": "GPT-5.4 • Flagship • Advanced reasoning & coding",
+        "gpt-5.4-pro": "GPT-5.4 Pro • Professional tier • Enhanced capabilities",
+        "gpt-5-mini": "GPT-5 Mini • Cost-optimized • Fast inference",
+        "gpt-5-nano": "GPT-5 Nano • Ultra-lightweight • Edge devices",
+        "gpt-5": "GPT-5 • Standard • Advanced capabilities",
+        "gpt-5-pro": "GPT-5 Pro • Professional • Enhanced features",
+        "gpt-5.1": "GPT-5.1 • Stable • Reliable performance",
+        "gpt-5.2": "GPT-5.2 • Enhanced • Improved reasoning",
+        "gpt-5.2-pro": "GPT-5.2 Pro • Professional • Advanced features",
+        
+        # GPT-4 Series
+        "gpt-4.1": "GPT-4.1 • Enhanced • Improved reasoning (Legacy)",
+        "gpt-4.1-nano": "GPT-4.1 Nano • Ultra-lightweight • Edge devices (Legacy)",
+        "gpt-4.1-mini": "GPT-4.1 Mini • Lightweight • Efficient (Legacy)",
+        "gpt-4o": "GPT-4 Omni • Multimodal • Strong capabilities (Legacy)",
+        "gpt-4o-mini": "GPT-4o Mini • Multimodal • Cost-effective (Legacy)",
+        "gpt-4o-search-preview": "GPT-4o Search • Enhanced search • Preview (Legacy)",
+        "gpt-4o-mini-search": "GPT-4o Mini Search • Cost search • Efficient (Legacy)",
+        "gpt-4.5-preview": "GPT-4.5 Preview • Next-gen • Advanced features (Legacy)",
+        
+        # Reasoning Models
+        "o1": "O1 • Advanced reasoning • Complex problem solving (Legacy)",
+        "o1-mini": "O1 Mini • Lightweight reasoning • Fast inference (Legacy)",
+        "o1-pro": "O1 Pro • Professional reasoning • Enhanced capabilities (Legacy)",
+        "o3": "O3 • Advanced reasoning • Latest generation",
+        "o3-mini": "O3 Mini • Lightweight reasoning • Efficient",
+        "o3-pro": "O3 Pro • Professional reasoning • Advanced features",
+        "o4-mini": "O4 Mini • Next-gen reasoning • Ultra-efficient",
+        
+        # Code Models
+        "gpt-5-codex": "GPT-5 Codex • Code generation • Advanced analysis",
+        "gpt-5.1-codex": "GPT-5.1 Codex • Code generation • Optimized",
+        "gpt-5.1-codex-max": "GPT-5.1 Codex Max • Maximum capability • Professional",
+        "gpt-5.1-codex-mini": "GPT-5.1 Codex Mini • Lightweight code • Fast",
+        "gpt-5.2-codex": "GPT-5.2 Codex • Enhanced code • Advanced features",
+        "gpt-5.3-codex": "GPT-5.3 Codex • Latest code • Advanced generation",
+        
+        # Specialized Models
+        "gpt-oss-20b": "GPT-OSS 20B • Open source • 20B parameters",
+        "gpt-oss-120b": "GPT-OSS 120B • Open source • 120B parameters",
+        "computer-use-preview": "Computer Use • Agent capabilities • Preview",
+        "omni-moderation-v1": "Omni Moderation • Content safety • Enterprise",
+    }
+    
+    return model_descriptions.get(model, f"{model} • Standard model")
+
+
+def show_models_in_category(category_name: str, models: list, category_icon: str) -> Optional[str]:
+    """Show models within a specific category with sub-categorization"""
+    from ai_agent.utils.curses_menu import get_curses_menu
+    
+    # For legacy categories, further subdivide by generation
+    if category_name in ["O Series Models", "GPT Series Models"]:
+        return show_models_with_subcategories(category_name, models, category_icon)
+    
+    menu = get_curses_menu(
+        f"{category_icon} {category_name}",
+        "Select your preferred model:"
+    )
+    
+    # Model descriptions for OpenAI models
+    model_descriptions = {
+        # GPT-5 Series
+        "gpt-5.4-mini (New)": "GPT-5.4 Mini • New • Cost-optimized • Fast inference",
+        "gpt-5.4-nano (New)": "GPT-5.4 Nano • New • Ultra-lightweight • Edge devices",
+        "gpt-5.4": "GPT-5.4 • Flagship • Advanced reasoning & coding",
+        "gpt-5.4-pro": "GPT-5.4 Pro • Professional tier • Enhanced capabilities",
+        "gpt-5-mini": "GPT-5 Mini • Cost-optimized • Fast inference",
+        "gpt-5-nano": "GPT-5 Nano • Ultra-lightweight • Edge devices",
+        "gpt-5": "GPT-5 • Standard • Advanced capabilities",
+        "gpt-5-pro": "GPT-5 Pro • Professional • Enhanced features",
+        "gpt-5.1": "GPT-5.1 • Stable • Reliable performance",
+        "gpt-5.2": "GPT-5.2 • Enhanced • Improved reasoning",
+        "gpt-5.2-pro": "GPT-5.2 Pro • Professional • Advanced features",
+        
+        # GPT-4 Series
+        "gpt-4.1": "GPT-4.1 • Enhanced • Improved reasoning (Legacy)",
+        "gpt-4.1-nano": "GPT-4.1 Nano • Ultra-lightweight • Edge devices (Legacy)",
+        "gpt-4.1-mini": "GPT-4.1 Mini • Lightweight • Efficient (Legacy)",
+        "gpt-4o": "GPT-4 Omni • Multimodal • Strong capabilities (Legacy)",
+        "gpt-4o-mini": "GPT-4o Mini • Multimodal • Cost-effective (Legacy)",
+        "gpt-4o-search-preview": "GPT-4o Search • Enhanced search • Preview (Legacy)",
+        "gpt-4o-mini-search": "GPT-4o Mini Search • Cost search • Efficient (Legacy)",
+        "gpt-4.5-preview": "GPT-4.5 Preview • Next-gen • Advanced features (Legacy)",
+        
+        # Reasoning Models
+        "o1": "O1 • Advanced reasoning • Complex problem solving (Legacy)",
+        "o1-mini": "O1 Mini • Lightweight reasoning • Fast inference (Legacy)",
+        "o1-pro": "O1 Pro • Professional reasoning • Enhanced capabilities (Legacy)",
+        "o3": "O3 • Advanced reasoning • Latest generation",
+        "o3-mini": "O3 Mini • Lightweight reasoning • Efficient",
+        "o3-pro": "O3 Pro • Professional reasoning • Advanced features",
+        "o4-mini": "O4 Mini • Next-gen reasoning • Ultra-efficient",
+        
+        # Code Models
+        "gpt-5-codex": "GPT-5 Codex • Code generation • Advanced analysis",
+        "gpt-5.1-codex": "GPT-5.1 Codex • Code generation • Optimized",
+        "gpt-5.1-codex-max": "GPT-5.1 Codex Max • Maximum capability • Professional",
+        "gpt-5.1-codex-mini": "GPT-5.1 Codex Mini • Lightweight code • Fast",
+        "gpt-5.2-codex": "GPT-5.2 Codex • Enhanced code • Advanced features",
+        "gpt-5.3-codex": "GPT-5.3 Codex • Latest code • Advanced generation",
+        
+        # Specialized Models
+        "gpt-oss-20b": "GPT-OSS 20B • Open source • 20B parameters",
+        "gpt-oss-120b": "GPT-OSS 120B • Open source • 120B parameters",
+        "computer-use-preview": "Computer Use • Agent capabilities • Preview",
+        "omni-moderation-v1": "Omni Moderation • Content safety • Enterprise",
+    }
+    
+    # Add models to menu
+    for model in models:
+        description = model_descriptions.get(model, f"{model} • Standard model")
+        if "new" in description.lower():
+            icon = "✨"  # Special icon for new models
+        elif "latest" in description.lower() or "newest" in description.lower():
+            icon = "🚀"
+        else:
+            icon = "🧠"
+        menu.add_item(model, description, model, icon)
+    
+    selected_model = menu.show()
+    return selected_model
+
+
+def show_models_with_subcategories(category_name: str, models: list, category_icon: str) -> Optional[str]:
+    """Show models with subcategories for Legacy Models"""
+    from ai_agent.utils.curses_menu import get_curses_menu
+    
+    menu = get_curses_menu(
+        f"{category_icon} {category_name}",
+        "Choose model type:"
+    )
+    
+    # Subdivide Legacy Models by type
+    o_series_models = [m for m in models if m.startswith("o") and not m.startswith("omni")]
+    gpt_series_models = [m for m in models if m.startswith("gpt") and not m.startswith("omni")]
+    codex_models = [m for m in models if "codex" in m]
+    other_models = [m for m in models if not (m.startswith("o") and not m.startswith("omni")) and not m.startswith("gpt") and "codex" not in m]
+    
+    if o_series_models:
+        menu.add_item(
+            "🧠 O Series Models",
+            f"O1, O3, O4 reasoning models ({len(o_series_models)} models)",
+            "subcategory_o_series",
+            "🧠"
+        )
+    if gpt_series_models:
+        menu.add_item(
+            "💬 GPT Series Models",
+            f"GPT-3, GPT-4, GPT-5 legacy models ({len(gpt_series_models)} models)",
+            "subcategory_gpt_series",
+            "💬"
+        )
+    if codex_models:
+        menu.add_item(
+            "💻 Codex Models",
+            f"Code generation models ({len(codex_models)} models)",
+            "subcategory_codex",
+            "💻"
+        )
+    if other_models:
+        menu.add_item(
+            "🔧 Other Models",
+            f"Specialized and utility models ({len(other_models)} models)",
+            "subcategory_other",
+            "🔧"
+        )
+    
+    selected_subcategory = menu.show()
+    
+    if selected_subcategory == "subcategory_o_series":
+        return show_o_series_subcategories(o_series_models)
+    elif selected_subcategory == "subcategory_gpt_series":
+        return show_gpt_series_subcategories(gpt_series_models)
+    elif selected_subcategory == "subcategory_codex":
+        return show_models_in_category("Codex Models", codex_models, "💻")
+    elif selected_subcategory == "subcategory_other":
+        return show_models_in_category("Other Models", other_models, "🔧")
+    else:
+        return None
+
+
+def show_o_series_subcategories(models: list) -> Optional[str]:
+    """Show O Series models subdivided by generation"""
+    from ai_agent.utils.curses_menu import get_curses_menu
+    
+    menu = get_curses_menu(
+        "🧠 O Series Models",
+        "Choose O Series generation:"
+    )
+    
+    o1_models = [m for m in models if m.startswith("o1")]
+    o3_models = [m for m in models if m.startswith("o3")]
+    o4_models = [m for m in models if m.startswith("o4")]
+    
+    if o1_models:
+        menu.add_item(
+            "🔹 O1 Series",
+            f"First generation reasoning models ({len(o1_models)} models)",
+            "subcategory_o1",
+            "🔹"
+        )
+    if o3_models:
+        menu.add_item(
+            "🔹 O3 Series",
+            f"Advanced reasoning models ({len(o3_models)} models)",
+            "subcategory_o3",
+            "🔹"
+        )
+    if o4_models:
+        menu.add_item(
+            "🔹 O4 Series",
+            f"Next generation reasoning models ({len(o4_models)} models)",
+            "subcategory_o4",
+            "🔹"
+        )
+    
+    selected_subcategory = menu.show()
+    
+    if selected_subcategory == "subcategory_o1":
+        return show_models_in_category("O1 Series", o1_models, "🔹")
+    elif selected_subcategory == "subcategory_o3":
+        return show_models_in_category("O3 Series", o3_models, "🔹")
+    elif selected_subcategory == "subcategory_o4":
+        return show_models_in_category("O4 Series", o4_models, "🔹")
+    else:
+        return None
+
+
+def show_gpt_series_subcategories(models: list) -> Optional[str]:
+    """Show GPT Series models subdivided by generation"""
+    from ai_agent.utils.curses_menu import get_curses_menu
+    
+    menu = get_curses_menu(
+        "💬 GPT Series Models",
+        "Choose GPT Series generation:"
+    )
+    
+    gpt3_models = [m for m in models if "gpt-3.5" in m or (m.startswith("gpt-3") and "3.5" not in m)]
+    gpt4_models = [m for m in models if "gpt-4" in m]
+    gpt5_legacy_models = [m for m in models if "gpt-5" in m and m not in ["gpt-5.4", "gpt-5.4-mini (New)", "gpt-5.4-nano (New)", "gpt-5.4-pro", "gpt-5.3-codex"]]
+    
+    if gpt3_models:
+        menu.add_item(
+            "🔹 GPT-3 Series",
+            f"Third generation models ({len(gpt3_models)} models)",
+            "subcategory_gpt3",
+            "🔹"
+        )
+    if gpt4_models:
+        menu.add_item(
+            "🔹 GPT-4 Series",
+            f"Fourth generation models ({len(gpt4_models)} models)",
+            "subcategory_gpt4",
+            "🔹"
+        )
+    if gpt5_legacy_models:
+        menu.add_item(
+            "🔹 GPT-5 Legacy",
+            f"Fifth generation legacy models ({len(gpt5_legacy_models)} models)",
+            "subcategory_gpt5",
+            "🔹"
+        )
+    
+    selected_subcategory = menu.show()
+    
+    if selected_subcategory == "subcategory_gpt3":
+        return show_models_in_category("GPT-3 Series", gpt3_models, "🔹")
+    elif selected_subcategory == "subcategory_gpt4":
+        return show_models_in_category("GPT-4 Series", gpt4_models, "🔹")
+    elif selected_subcategory == "subcategory_gpt5":
+        return show_models_in_category("GPT-5 Legacy", gpt5_legacy_models, "🔹")
+    else:
+        return None
 
 
 def get_valid_api_key(prompt):
