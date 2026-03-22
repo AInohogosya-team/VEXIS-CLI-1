@@ -233,26 +233,8 @@ python3 check_environment.py
 | Document | Description | Link |
 |----------|-------------|------|
 | 📖 **Detailed User Guide** | Comprehensive setup and usage | [DETAILED_GUIDE.md](./DETAILED_GUIDE.md) |
-| ⚙️ **Configuration Guide** | Advanced configuration options | [docs/CONFIGURATION.md](./docs/CONFIGURATION.md) |
+| ⚙️ **Configuration** | Configuration options | [docs/CONFIGURATION.md](./docs/CONFIGURATION.md) |
 | 🔧 **Troubleshooting** | Common issues and solutions | [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md) |
-| 🏗️ **Architecture** | Technical deep-dive | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) |
-
----
-
-## 🎯 Roadmap
-
-### 🚀 **Coming Soon**
-- [ ] **Web Dashboard** - Beautiful GUI for VEXIS-CLI
-- [ ] **Plugin System** - Extensible architecture for custom commands
-- [ ] **Team Collaboration** - Shared workflows and templates
-- [ ] **Voice Control** - Command your terminal with speech
-- [ ] **Mobile App** - Control your systems from anywhere
-
-### 🌟 **Future Vision**
-- **Autonomous System Management** - Self-healing and optimization
-- **Cross-Platform Sync** - Seamless experience across devices
-- **AI Model Fine-Tuning** - Personalized to your workflow
-- **Enterprise Features** - SSO, audit logs, compliance
 
 ---
 
@@ -262,20 +244,18 @@ python3 check_environment.py
 - 📖 [Documentation](./docs/)
 - 🐛 [Issue Tracker](https://github.com/vexis-project/VEXIS-CLI-1.2/issues)
 - 💬 [Discussions](https://github.com/vexis-project/VEXIS-CLI-1.2/discussions)
-- 📧 [Email Support](mailto:support@vexis-project.com)
 
 ### ⭐ **Show Your Love**
 - **Star the repo** - It helps others discover VEXIS-CLI
 - **Share your use cases** - We love to see what you build!
-- **Follow us** - Stay updated with latest features
 
 ---
 
 <div align="center">
 
-## 🎉 Ready to Transform Your Terminal Experience?
+## 🎉 Transform Your Terminal Experience
 
-**Join thousands of developers who've revolutionized their workflow**
+**VEXIS-CLI makes command-line automation intuitive and accessible**
 
 [🚀 Get Started Now](#installation) • [⭐ Star on GitHub](https://github.com/vexis-project/VEXIS-CLI-1.2) • [📖 Read the Docs](./docs/)
 
