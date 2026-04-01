@@ -1,10 +1,10 @@
 """
 User Interface Layer for AI Agent System
-2-Phase Architecture: Two-phase application entry point
+5-Phase Architecture: Five-phase application entry point
 """
 
-from .two_phase_app import TwoPhaseAIAgent
+from .five_phase_app import FivePhaseAIAgent
 
 __all__ = [
-    "TwoPhaseAIAgent",
+    "FivePhaseAIAgent",
 ]

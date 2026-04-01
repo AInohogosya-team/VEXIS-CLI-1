@@ -41,65 +41,51 @@ class OpenAILLMClient(BaseLLM):
         - top_p -> top_p (0.0 - 1.0)
         - stop_sequences -> stop (list of strings)
         - seed -> seed
-        - system_instruction -> messages[0] with role="system"
     
     Usage:
-        client = OpenAILLMClient(api_key="your-api-key")
-        
-        # Simple generation
-        response = client.generate("Explain quantum computing")
-        print(response.content)
-        
-        # With configuration
-        config = GenerationConfig(
-            max_tokens=2000,
-            temperature=0.7,
-            system_instruction="You are a helpful science tutor."
-        )
+        client = OpenAIClient(api_key="your-key")
         response = client.generate("Explain quantum computing", config=config)
     
-    Latest Models (as of 2025):
-        - gpt-4o: Multimodal flagship model
-        - gpt-4o-mini: Fast, cost-effective
-        - gpt-4-turbo: Advanced reasoning
-        - gpt-3.5-turbo: Legacy, fast and cheap
-        - o1/o1-mini: Reasoning models (preview)
+    Latest Models (as of 2026):
+        - gpt-5.4: Multimodal flagship model
+        - gpt-5.4-pro: Professional tier
+        - gpt-5.4-mini: Cost-optimized
+        - gpt-5.4-nano: Ultra-lightweight
+        - o3/o3-mini: Advanced reasoning models
     """
 
     # Default model to use
     DEFAULT_MODEL = "gpt-5.4"
-    
+
     # Model context windows (approximate)
     MODEL_CONTEXT_WINDOWS = {
         "gpt-5.4": 1_048_576,
+        "gpt-5.4-mini": 1_048_576,
+        "gpt-5.4-nano": 1_048_576,
         "gpt-5.4-pro": 1_048_576,
-        "gpt-5.4-mini": 400_000,
-        "gpt-5.4-nano": 200_000,
-        "gpt-5-mini": 1_048_576,
-        "gpt-4o": 128_000,
-        "gpt-4o-mini": 128_000,
-        "gpt-4": 8_192,
+        "o3": 200_000,
+        "o4-mini": 200_000,
+        "o3-mini": 200_000,
     }
-    
+
     # Max output tokens per model
     MODEL_MAX_TOKENS = {
         "gpt-5.4": 32_768,
-        "gpt-5.4-pro": 32_768,
         "gpt-5.4-mini": 16_384,
         "gpt-5.4-nano": 8_192,
-        "gpt-5-mini": 16_384,
-        "gpt-4o": 16_384,
-        "gpt-4o-mini": 16_384,
-        "gpt-4": 4_096,
+        "gpt-5.4-pro": 32_768,
+        "o3": 32_768,
+        "o4-mini": 16_384,
+        "o3-mini": 16_384,
     }
-    
+
     # Vision-capable models
     VISION_MODELS = {
-        "gpt-5.4", "gpt-5.4-pro", "gpt-5-mini", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-4o", "gpt-4o-mini",
+        "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.4-pro",
     }
-    
+
     # Reasoning models (use different parameter handling)
-    REASONING_MODELS = {"o3", "o3-mini"}
+    REASONING_MODELS = {"o3", "o3-mini", "o4-mini"}
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         """
@@ -160,7 +146,7 @@ class OpenAILLMClient(BaseLLM):
         self._async_client = AsyncOpenAI(**client_kwargs)
 
     def _is_reasoning_model(self, model: str) -> bool:
-        """Check if model is a reasoning model (o1, o1-mini, etc.)"""
+        """Check if model is a reasoning model (o3, o3-mini, etc.)"""
         return any(r in model for r in self.REASONING_MODELS)
 
     def _build_messages(
@@ -277,7 +263,7 @@ class OpenAILLMClient(BaseLLM):
         Args:
             prompt: Input text prompt
             config: Generation configuration
-            model: Model ID to use (defaults to gpt-4o)
+            model: Model ID to use (defaults to gpt-5.4)
             **kwargs: Additional arguments
                 - image_data: bytes - Image data for vision models
                 - image_format: str - Image format (png, jpeg, etc.)
@@ -498,392 +484,17 @@ class OpenAILLMClient(BaseLLM):
     def list_models(self) -> List[ModelInfo]:
         """
         List available OpenAI models.
-        
+
         Returns:
-            List of ModelInfo objects
+            List of ModelInfo objects - returns empty list if API unavailable
         """
-        # OpenAI has a fixed set of chat models, return known ones
-        return self._get_fallback_models()
+        # Return empty list - actual model validation happens at API call time
+        # This ensures we don't provide fallback models that override user selection
+        return []
 
     def _get_fallback_models(self) -> List[ModelInfo]:
-        """Return known OpenAI models"""
-        models = [
-            ModelInfo(
-                id="gpt-5.4",
-                name="GPT-5.4",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=32_768,
-                supports_vision=True,
-                supports_streaming=True,
-                description="Latest flagship model with advanced reasoning and coding",
-                capabilities=["vision", "function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="gpt-5.4-pro",
-                name="GPT-5.4 Pro",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=32_768,
-                supports_vision=True,
-                supports_streaming=True,
-                description="Professional GPT-5.4 with enhanced capabilities",
-                capabilities=["vision", "function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="gpt-5-mini",
-                name="GPT-5 Mini",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=16_384,
-                supports_vision=True,
-                supports_streaming=True,
-                description="Cost-optimized GPT-5 with fast inference",
-                capabilities=["vision", "function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="gpt-5-nano",
-                name="GPT-5 Nano",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=8_192,
-                supports_vision=True,
-                supports_streaming=True,
-                description="Ultra-lightweight GPT-5 for edge devices",
-                capabilities=["vision", "function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="gpt-5",
-                name="GPT-5",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=32_768,
-                supports_vision=True,
-                supports_streaming=True,
-                description="Standard GPT-5 model",
-                capabilities=["vision", "function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="gpt-4.1",
-                name="GPT-4.1",
-                provider=self.provider_type.value,
-                context_window=128_000,
-                max_output_tokens=16_384,
-                supports_vision=True,
-                supports_streaming=True,
-                description="Enhanced GPT-4 with improved reasoning",
-                capabilities=["vision", "function_calling", "json_mode", "streaming"]
-            ),
-            ModelInfo(
-                id="gpt-5-codex",
-                name="GPT-5 Codex",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=32_768,
-                supports_vision=False,
-                supports_streaming=True,
-                description="Specialized GPT-5 for code generation and analysis",
-                capabilities=["function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="gpt-5.3-codex",
-                name="GPT-5.3 Codex",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=32_768,
-                supports_vision=False,
-                supports_streaming=True,
-                description="Advanced code generation model",
-                capabilities=["function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="gpt-5.2-codex",
-                name="GPT-5.2 Codex",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=32_768,
-                supports_vision=False,
-                supports_streaming=True,
-                description="Enhanced code analysis and generation",
-                capabilities=["function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="gpt-5.1-codex",
-                name="GPT-5.1 Codex",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=32_768,
-                supports_vision=False,
-                supports_streaming=True,
-                description="Optimized code generation model",
-                capabilities=["function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="gpt-5.1-codex-max",
-                name="GPT-5.1 Codex Max",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=64_536,
-                supports_vision=False,
-                supports_streaming=True,
-                description="Maximum capability code generation model",
-                capabilities=["function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="gpt-5.1-codex-mini",
-                name="GPT-5.1 Codex Mini",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=8_192,
-                supports_vision=False,
-                supports_streaming=True,
-                description="Lightweight code generation model",
-                capabilities=["function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="gpt-oss-20b",
-                name="GPT-OSS 20B",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=32_768,
-                supports_vision=False,
-                supports_streaming=True,
-                description="Open-source 20B parameter model",
-                capabilities=["function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="gpt-oss-120b",
-                name="GPT-OSS 120B",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=32_768,
-                supports_vision=False,
-                supports_streaming=True,
-                description="Open-source 120B parameter model",
-                capabilities=["function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="gpt-5.2",
-                name="GPT-5.2",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=32_768,
-                supports_vision=True,
-                supports_streaming=True,
-                description="Enhanced GPT-5.2 model",
-                capabilities=["vision", "function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="gpt-5.2-pro",
-                name="GPT-5.2 Pro",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=32_768,
-                supports_vision=True,
-                supports_streaming=True,
-                description="Professional GPT-5.2 with enhanced capabilities",
-                capabilities=["vision", "function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="o3-pro",
-                name="O3 Pro",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=32_768,
-                supports_vision=False,
-                supports_streaming=True,
-                description="Professional reasoning model",
-                capabilities=["function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="o4-mini",
-                name="O4 Mini",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=16_384,
-                supports_vision=False,
-                supports_streaming=True,
-                description="Lightweight reasoning model",
-                capabilities=["function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="gpt-4.1-nano",
-                name="GPT-4.1 Nano",
-                provider=self.provider_type.value,
-                context_window=128_000,
-                max_output_tokens=8_192,
-                supports_vision=True,
-                supports_streaming=True,
-                description="Ultra-lightweight GPT-4.1 for edge devices",
-                capabilities=["vision", "function_calling", "json_mode", "streaming"]
-            ),
-            ModelInfo(
-                id="computer-use-preview",
-                name="Computer Use Preview",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=32_768,
-                supports_vision=True,
-                supports_streaming=True,
-                description="Preview model for computer use tasks",
-                capabilities=["vision", "function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="gpt-4o-search-preview",
-                name="GPT-4o Search Preview",
-                provider=self.provider_type.value,
-                context_window=128_000,
-                max_output_tokens=16_384,
-                supports_vision=True,
-                supports_streaming=True,
-                description="GPT-4o with enhanced search capabilities",
-                capabilities=["vision", "function_calling", "json_mode", "streaming"]
-            ),
-            ModelInfo(
-                id="o3-mini",
-                name="O3 Mini",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=16_384,
-                supports_vision=False,
-                supports_streaming=True,
-                description="Lightweight reasoning model",
-                capabilities=["function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="omni-moderation-v1",
-                name="Omni Moderation v1",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=16_384,
-                supports_vision=False,
-                supports_streaming=True,
-                description="Content moderation model",
-                capabilities=["function_calling", "json_mode", "streaming"]
-            ),
-            ModelInfo(
-                id="gpt-5.1",
-                name="GPT-5.1",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=32_768,
-                supports_vision=True,
-                supports_streaming=True,
-                description="GPT-5.1 model",
-                capabilities=["vision", "function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="gpt-5-pro",
-                name="GPT-5 Pro",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=32_768,
-                supports_vision=True,
-                supports_streaming=True,
-                description="Professional GPT-5 with enhanced capabilities",
-                capabilities=["vision", "function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="o3",
-                name="O3",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=32_768,
-                supports_vision=False,
-                supports_streaming=True,
-                description="Advanced reasoning model",
-                capabilities=["function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="gpt-4.1-mini",
-                name="GPT-4.1 Mini",
-                provider=self.provider_type.value,
-                context_window=128_000,
-                max_output_tokens=16_384,
-                supports_vision=True,
-                supports_streaming=True,
-                description="Lightweight GPT-4.1 model",
-                capabilities=["vision", "function_calling", "json_mode", "streaming"]
-            ),
-            ModelInfo(
-                id="o1-pro",
-                name="O1 Pro",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=32_768,
-                supports_vision=False,
-                supports_streaming=True,
-                description="Professional reasoning model",
-                capabilities=["function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="gpt-4o-mini-search",
-                name="GPT-4o Mini Search",
-                provider=self.provider_type.value,
-                context_window=128_000,
-                max_output_tokens=16_384,
-                supports_vision=True,
-                supports_streaming=True,
-                description="GPT-4o Mini with search capabilities",
-                capabilities=["vision", "function_calling", "json_mode", "streaming"]
-            ),
-            ModelInfo(
-                id="gpt-4.5-preview",
-                name="GPT-4.5 Preview",
-                provider=self.provider_type.value,
-                context_window=128_000,
-                max_output_tokens=16_384,
-                supports_vision=True,
-                supports_streaming=True,
-                description="Preview of GPT-4.5 capabilities",
-                capabilities=["vision", "function_calling", "json_mode", "streaming"]
-            ),
-            ModelInfo(
-                id="o1",
-                name="O1",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=32_768,
-                supports_vision=False,
-                supports_streaming=True,
-                description="Advanced reasoning model",
-                capabilities=["function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="o1-mini",
-                name="O1 Mini",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=16_384,
-                supports_vision=False,
-                supports_streaming=True,
-                description="Lightweight reasoning model",
-                capabilities=["function_calling", "json_mode", "streaming", "reasoning"]
-            ),
-            ModelInfo(
-                id="gpt-4o",
-                name="GPT-4o",
-                provider=self.provider_type.value,
-                context_window=128_000,
-                max_output_tokens=16_384,
-                supports_vision=True,
-                supports_streaming=True,
-                description="Multimodal flagship model",
-                capabilities=["vision", "function_calling", "json_mode", "streaming"]
-            ),
-            ModelInfo(
-                id="gpt-4o-mini",
-                name="GPT-4o Mini",
-                provider=self.provider_type.value,
-                context_window=128_000,
-                max_output_tokens=16_384,
-                supports_vision=True,
-                supports_streaming=True,
-                description="Fast, cost-effective multimodal model",
-                capabilities=["vision", "function_calling", "json_mode", "streaming"]
-            ),
-        ]
-        return models
+        """Return empty list - no fallback models to avoid overriding user selection"""
+        return []
 
     def get_model_info(self, model_id: str) -> Optional[ModelInfo]:
         """Get information about a specific model"""

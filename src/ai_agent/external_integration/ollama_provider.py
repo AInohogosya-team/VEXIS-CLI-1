@@ -1,5 +1,5 @@
 """
-Simplified Ollama Provider for VEXIS-CLI
+Simplified Ollama Provider for VEXIS-CLI-2
 Direct API calls to Ollama - no magic, no auto-fixes
 """
 
@@ -26,7 +26,7 @@ class SimpleOllamaProvider:
     """
 
     # Valid Ollama models (local or cloud)
-    DEFAULT_MODEL = "llama3.2:latest"
+    DEFAULT_MODEL = "llama4-scout-17b"
 
     def __init__(self, endpoint: str = "http://localhost:11434", timeout: int = 120):
         self.endpoint = endpoint.rstrip("/")
@@ -39,7 +39,7 @@ class SimpleOllamaProvider:
 
         Args:
             prompt: The prompt to send
-            model: Model name (defaults to llama3.2:latest)
+            model: Model name (defaults to llama4-scout-17b)
             temperature: Sampling temperature
             max_tokens: Max tokens to generate
 

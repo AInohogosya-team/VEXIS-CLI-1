@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide covers deployment strategies, configurations, and best practices for VEXIS-CLI-1.2 in various environments from development to production.
+This guide covers deployment strategies, configurations, and best practices for VEXIS-CLI-2.0 in various environments from development to production.
 
 ## Deployment Architectures
 
@@ -13,7 +13,7 @@ This guide covers deployment strategies, configurations, and best practices for 
 │           Single Machine               │
 ├─────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────────┐   │
-│  │ VEXIS-CLI-1.2 │  │   Ollama       │   │
+│  │ VEXIS-CLI-2.0 │  │   Ollama       │   │
 │  │   Engine    │  │   Server       │   │
 │  └─────────────┘  └─────────────────┘   │
 │  ┌─────────────┐  ┌─────────────────┐   │
@@ -43,7 +43,7 @@ This guide covers deployment strategies, configurations, and best practices for 
                     └─────────────┬─────────────┘
                                  │
                     ┌─────────────┴─────────────┐
-                    │   VEXIS-CLI-1.2 Cluster    │
+                    │   VEXIS-CLI-2.0 Cluster    │
                     │  ┌─────────────────────┐ │
                     │  │   Application Node   │ │
                     │  └─────────────────────┘ │
@@ -67,7 +67,7 @@ This guide covers deployment strategies, configurations, and best practices for 
 ├─────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────────┐   │
 │  │   Container │  │   Container     │   │
-│  │  VEXIS-CLI  │  │    Ollama      │   │
+│  │  VEXIS-CLI-2 │  │    Ollama      │   │
 │  └─────────────┘  └─────────────────┘   │
 │  ┌─────────────┐  ┌─────────────────┐   │
 │  │   Container │  │   Container     │   │
@@ -108,8 +108,8 @@ ollama --version
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/vexis-project/VEXIS-CLI-1.2.git
-cd VEXIS-CLI-1.2
+git clone https://github.com/vexis-project/VEXIS-CLI-2.0.git
+cd VEXIS-CLI-2.0
 
 # 2. Create virtual environment
 python3 -m venv venv
@@ -208,7 +208,7 @@ monitoring:
 
 set -e
 
-echo "Deploying VEXIS-CLI-1.2 to staging..."
+echo "Deploying VEXIS-CLI-2.0 to staging..."
 
 # 1. Update code
 git pull origin main
@@ -712,7 +712,7 @@ sudo chown ec2-user:ec2-user /opt/vexis
 
 # Clone repository
 cd /opt/vexis
-git clone https://github.com/vexis-project/VEXIS-CLI-1.2.git .
+git clone https://github.com/vexis-project/VEXIS-CLI-2.0.git .
 
 # Set up environment
 echo "GOOGLE_API_KEY=${GOOGLE_API_KEY}" > .env

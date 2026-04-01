@@ -114,27 +114,36 @@ class MultiProviderVisionAPIClient:
         self.logger.info(f"Multi-provider Vision API client initialized with {len(self.api_clients)} providers")
     
     def _initialize_api_clients(self):
-        """Initialize all available API clients"""
+        """Initialize all available API clients with API keys from settings"""
+        from ..utils.settings_manager import get_settings_manager
+        settings = get_settings_manager()
+        
         provider_mappings = {
-            'google': ProviderType.GOOGLE,
-            'openai': ProviderType.OPENAI,
-            'anthropic': ProviderType.ANTHROPIC,
-            'xai': ProviderType.XAI,
-            'meta': ProviderType.META,
-            'mistral': ProviderType.MISTRAL,
-            'microsoft': ProviderType.MICROSOFT,
-            'amazon': ProviderType.AMAZON,
-            'cohere': ProviderType.COHERE,
-            'deepseek': ProviderType.DEEPSEEK,
-            'groq': ProviderType.GROQ,
-            'together': ProviderType.TOGETHER,
-            'minimax': ProviderType.MINIMAX,
-            'zhipuai': ProviderType.ZHIPUAI,
+            'google': (ProviderType.GOOGLE, settings.get_google_api_key),
+            'openai': (ProviderType.OPENAI, settings.get_openai_api_key),
+            'anthropic': (ProviderType.ANTHROPIC, settings.get_anthropic_api_key),
+            'xai': (ProviderType.XAI, settings.get_xai_api_key),
+            'meta': (ProviderType.META, settings.get_meta_api_key),
+            'mistral': (ProviderType.MISTRAL, settings.get_mistral_api_key),
+            'microsoft': (ProviderType.MICROSOFT, settings.get_microsoft_api_key),
+            'amazon': (ProviderType.AMAZON, lambda: settings.get_amazon_access_key()),
+            'cohere': (ProviderType.COHERE, settings.get_cohere_api_key),
+            'deepseek': (ProviderType.DEEPSEEK, settings.get_deepseek_api_key),
+            'groq': (ProviderType.GROQ, settings.get_groq_api_key),
+            'together': (ProviderType.TOGETHER, settings.get_together_api_key),
+            'minimax': (ProviderType.MINIMAX, settings.get_minimax_api_key),
+            'zhipuai': (ProviderType.ZHIPUAI, settings.get_zhipuai_api_key),
         }
         
-        for provider_name, provider_type in provider_mappings.items():
+        for provider_name, (provider_type, api_key_getter) in provider_mappings.items():
             try:
-                client = LLMFactory.create(provider_type)
+                api_key = api_key_getter()
+                if not api_key:
+                    # Skip providers without API keys - they'll show as "not available"
+                    self.logger.debug(f"Skipping {provider_name} - no API key configured")
+                    continue
+                    
+                client = LLMFactory.create(provider_type, api_key=api_key)
                 self.api_clients[provider_name] = client
                 self.logger.info(f"Initialized {provider_name} client")
             except ValueError as e:
@@ -151,68 +160,10 @@ class MultiProviderVisionAPIClient:
                 # Don't add to api_clients dict - this provider failed to initialize
     
     def _offer_sdk_installation(self, provider: str):
-        """Offer to install SDK for a missing provider"""
-        if not self.sdk_installer:
-            return
-        
-        try:
-            # Check if we're in an interactive terminal
-            if not sys.stdin.isatty():
-                return  # Not interactive, don't offer installation
-            
-            print(f"\n🔍 Missing SDK detected for {provider}")
-            print(f"   This provider requires additional installation to work.")
-            
-            # Show what will be installed
-            missing_sdks = self.sdk_installer.get_missing_sdks([provider])
-            if provider in missing_sdks:
-                sdk_info = missing_sdks[provider]
-                print(f"   Package: {sdk_info['package']}")
-                print(f"   Description: {sdk_info['description']}")
-                print(f"   Command: {sdk_info['install_command']}")
-                
-                try:
-                    choice = input(f"\nWould you like to install {sdk_info['package']} now? (y/n): ").lower().strip()
-                    if choice in ['y', 'yes']:
-                        success = self.sdk_installer.install_sdk(provider, interactive=False)
-                        
-                        if success:
-                            # Try to initialize the provider again
-                            try:
-                                from api import LLMFactory, ProviderType
-                                provider_mappings = {
-                                    'google': ProviderType.GOOGLE,
-                                    'openai': ProviderType.OPENAI,
-                                    'anthropic': ProviderType.ANTHROPIC,
-                                    'xai': ProviderType.XAI,
-                                    'meta': ProviderType.META,
-                                    'mistral': ProviderType.MISTRAL,
-                                    'microsoft': ProviderType.MICROSOFT,
-                                    'amazon': ProviderType.AMAZON,
-                                    'cohere': ProviderType.COHERE,
-                                    'deepseek': ProviderType.DEEPSEEK,
-                                    'groq': ProviderType.GROQ,
-                                    'together': ProviderType.TOGETHER,
-                                    'minimax': ProviderType.MINIMAX,
-                                    'zhipuai': ProviderType.ZHIPUAI,
-                                }
-                                
-                                if provider in provider_mappings:
-                                    client = LLMFactory.create(provider_mappings[provider])
-                                    self.api_clients[provider] = client
-                                    self.logger.info(f"Successfully initialized {provider} client after SDK installation")
-                                    print(f"✅ {provider} is now available!")
-                                    
-                            except Exception as e:
-                                self.logger.warning(f"Still failed to initialize {provider} after SDK installation: {e}")
-                                print(f"⚠️ SDK installed but {provider} still not available: {e}")
-                        else:
-                            print(f"❌ Failed to install SDK for {provider}")
-                except (KeyboardInterrupt, EOFError):
-                    print("\nInstallation cancelled.")
-                    
-        except Exception as e:
-            self.logger.error(f"Error offering SDK installation for {provider}: {e}")
+        """Offer to install SDK for a missing provider - disabled to avoid noise"""
+        # Disabled: Don't prompt for SDK installation during provider initialization
+        # This avoids spamming users with messages about unused providers like MiniMax
+        pass
     
     def generate_response(self, request: APIRequest) -> APIResponse:
         """Generate response using specified or preferred provider"""
@@ -290,7 +241,6 @@ class MultiProviderVisionAPIClient:
             config = GenerationConfig(
                 max_tokens=request.max_tokens,
                 temperature=request.temperature,
-                model=request.model,
                 system_instruction=request.system_instruction
             )
             
@@ -306,13 +256,14 @@ class MultiProviderVisionAPIClient:
             response = client.generate(prompt_with_image, config)
             
             return APIResponse(
-                success=True,
+                success=response.success,
                 content=response.content,
                 model=response.model or request.model or 'unknown',
                 provider=provider,
                 tokens_used=response.tokens_used,
                 cost=response.cost,
-                latency=time.time() - start_time
+                latency=time.time() - start_time,
+                error=response.error
             )
         except Exception as e:
             return APIResponse(

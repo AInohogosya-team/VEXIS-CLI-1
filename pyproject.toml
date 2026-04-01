@@ -3,13 +3,13 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "vexis-cli-1"
-version = "1.0.0"
+name = "vexis-cli-2"
+version = "2.0.0"
 description = "AI command-line agent for terminal automation and task execution"
 readme = "README.md"
 license = "MIT"
 authors = [
-    {name = "VEXIS Contributors"}
+    {name = "AInohogosya"}
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -43,13 +43,13 @@ dependencies = [
 
 
 [project.scripts]
-"vexis-cli" = "ai_agent.user_interface.main_app:main"
-"vexis-cli-enhanced" = "ai_agent.user_interface.two_phase_app:main"
+"vexis-cli" = "ai_agent.user_interface.five_phase_app:main"
+"vexis-cli-enhanced" = "ai_agent.user_interface.five_phase_app:main"
 
 [project.urls]
-Homepage = "https://github.com/vexis-project/VEXIS-CLI-1.2"
-Repository = "https://github.com/vexis-project/VEXIS-CLI-1.2"
-"Bug Reports" = "https://github.com/vexis-project/VEXIS-CLI-1.2/issues"
+Homepage = "https://github.com/vexis-project/VEXIS-CLI-2.0"
+Repository = "https://github.com/vexis-project/VEXIS-CLI-2.0"
+"Bug Reports" = "https://github.com/vexis-project/VEXIS-CLI-2.0/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]

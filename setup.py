@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Quick Setup Script for VEXIS-CLI
+Quick Setup Script for VEXIS-CLI-2
 Automatically checks and fixes common setup issues
 """
 
@@ -94,7 +94,7 @@ def check_python_deps():
 
 def main():
     """Main setup function"""
-    print("=== VEXIS-CLI Quick Setup ===")
+    print("=== VEXIS-CLI-2 Quick Setup ===")
     print("This script will check and fix common setup issues.\n")
     
     # Change to project directory if needed

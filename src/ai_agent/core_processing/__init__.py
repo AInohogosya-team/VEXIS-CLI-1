@@ -1,12 +1,12 @@
 """
 Core Processing Layer for AI Agent System
-2-Phase Architecture: Task generation and execution engine
+5-Phase Architecture: Command Suggestion → Extraction → Execution → Evaluation → Summary
 """
 
 from .command_parser import CommandParser
-from .two_phase_engine import TwoPhaseEngine
+from .five_phase_engine import FivePhaseEngine
 
 __all__ = [
     "CommandParser", 
-    "TwoPhaseEngine",
+    "FivePhaseEngine",
 ]

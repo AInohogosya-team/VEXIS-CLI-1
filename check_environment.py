@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Standalone Environment Check Script for VEXIS-CLI-1.2
+Standalone Environment Check Script for VEXIS-CLI-2
 Usage: python3 check_environment.py [--fix]
 """
 
@@ -20,7 +20,7 @@ def main():
     fix_mode = "--fix" in sys.argv
     
     print("=" * 70)
-    print("🔍 VEXIS-CLI-1.2 Environment Detection and Setup")
+    print("🔍 VEXIS-CLI-2 Environment Detection and Setup")
     print("=" * 70)
     
     # Run detection and create plan

@@ -62,7 +62,7 @@ class TerminalSession:
     start_time: float
     entries: List[TerminalEntry] = field(default_factory=list)
     end_time: Optional[float] = None
-    current_working_directory: str = field(default_factory=lambda: str(Path(__file__).parent.parent.parent.parent))
+    current_working_directory: str = field(default_factory=lambda: str(Path("/")))
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -120,18 +120,14 @@ class TerminalHistory:
             self.logger = get_logger("terminal_history")
             
             # Initialize terminal session
-            # Initialize terminal session with project root as working directory
-            # Navigate to top-level directory (VEXIS-CLI-1.2) first
-            project_root = Path(__file__).parent.parent.parent.parent
+            # Initialize terminal session with system root directory as working directory
+            # Start from root directory (/) instead of project directory
+            self._current_directory = Path("/")
             self.terminal_session = TerminalSession(
                 session_id=self.session_id,
                 start_time=time.time(),
-                current_working_directory=str(project_root)
+                current_working_directory=str(self._current_directory)
             )
-            
-            # Track current working directory with project root
-            self._current_directory = project_root
-            self._previous_directory = None  # For cd - command
             
             # Platform-specific settings
             self._platform = platform.system().lower()
@@ -895,6 +891,301 @@ class TerminalHistory:
             # Always restore original directory
             self._current_directory = original_dir
             self.terminal_session.current_working_directory = str(self._current_directory)
+
+    def execute_commands_batch(self, commands: List[str], timeout: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Execute multiple commands in a single batch using the same terminal session.
+        All commands are pasted and executed at once, maintaining the same session.
+        
+        Args:
+            commands: List of commands to execute
+            timeout: Command timeout in seconds (overrides default)
+            
+        Returns:
+            Dict with execution results including output, error, return code
+        """
+        if not commands:
+            raise ValidationError("Commands list cannot be empty")
+        
+        # Validate timeout
+        if timeout is not None:
+            if not isinstance(timeout, (int, float)):
+                raise ValidationError("Timeout must be a number")
+            if timeout <= 0:
+                raise ValidationError("Timeout must be positive")
+        else:
+            timeout = self.DEFAULT_TIMEOUT
+        
+        start_time = time.time()
+        
+        # Combine all commands with newlines for batch execution
+        batch_command = "\n".join(commands)
+        
+        try:
+            # Log the batch command entry
+            command_entry = TerminalEntry(
+                timestamp=start_time,
+                entry_type=TerminalEntryType.COMMAND,
+                content=batch_command,
+                command=batch_command,
+                working_directory=str(self._current_directory)
+            )
+            self.terminal_session.entries.append(command_entry)
+            
+            self.logger.info(f"Executing batch of {len(commands)} commands", 
+                           command_count=len(commands),
+                           working_directory=str(self._current_directory))
+            
+            # Execute all commands in a single shell session
+            result = self._execute_batch_subprocess(commands, timeout)
+            
+            duration = time.time() - start_time
+            
+            # Update command entry with execution results
+            command_entry.return_code = result.returncode
+            command_entry.duration = duration
+            
+            self.logger.info(
+                f"Batch command completed",
+                return_code=result.returncode,
+                duration=duration,
+                success=result.returncode == 0
+            )
+            
+            # Log output entry
+            if result.stdout and result.stdout.strip():
+                output_entry = TerminalEntry(
+                    timestamp=start_time + duration,
+                    entry_type=TerminalEntryType.OUTPUT,
+                    content=result.stdout,
+                    command=batch_command,
+                    working_directory=str(self._current_directory),
+                    return_code=result.returncode,
+                    duration=duration
+                )
+                self.terminal_session.entries.append(output_entry)
+            
+            # Log error entry if there's stderr
+            if result.stderr and result.stderr.strip():
+                error_entry = TerminalEntry(
+                    timestamp=start_time + duration,
+                    entry_type=TerminalEntryType.ERROR,
+                    content=result.stderr,
+                    command=batch_command,
+                    working_directory=str(self._current_directory),
+                    return_code=result.returncode,
+                    duration=duration
+                )
+                self.terminal_session.entries.append(error_entry)
+            
+            # Persist history
+            self._persist_history()
+            
+            return {
+                "success": result.returncode == 0,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "return_code": result.returncode,
+                "duration": duration,
+                "working_directory": str(self._current_directory)
+            }
+            
+        except subprocess.TimeoutExpired as e:
+            error_msg = f"Batch command timed out after {timeout} seconds"
+            self.logger.error(error_msg)
+            
+            # Log timeout error
+            error_entry = TerminalEntry(
+                timestamp=time.time(),
+                entry_type=TerminalEntryType.ERROR,
+                content=error_msg,
+                command=batch_command,
+                working_directory=str(self._current_directory),
+                return_code=-1
+            )
+            self.terminal_session.entries.append(error_entry)
+            self._persist_history()
+            
+            return {
+                "success": False,
+                "stdout": "",
+                "stderr": error_msg,
+                "return_code": -1,
+                "duration": timeout,
+                "working_directory": str(self._current_directory)
+            }
+            
+        except Exception as e:
+            error_msg = f"Batch command execution failed: {str(e)}"
+            self.logger.error(error_msg, error_type=type(e).__name__)
+            
+            # Log execution error
+            error_entry = TerminalEntry(
+                timestamp=time.time(),
+                entry_type=TerminalEntryType.ERROR,
+                content=error_msg,
+                command=batch_command,
+                working_directory=str(self._current_directory),
+                return_code=-1
+            )
+            self.terminal_session.entries.append(error_entry)
+            self._persist_history()
+            
+            return {
+                "success": False,
+                "stdout": "",
+                "stderr": error_msg,
+                "return_code": -1,
+                "duration": time.time() - start_time,
+                "working_directory": str(self._current_directory)
+            }
+
+    def _execute_batch_subprocess(self, commands: List[str], timeout: int):
+        """Execute multiple commands in a single subprocess batch with inactivity-based timeout.
+        
+        Uses two timeout mechanisms:
+        - Overall timeout: 10 hours (36000 seconds) maximum total execution time
+        - Inactivity timeout: 10 minutes (600 seconds) - kills process if no new output
+        
+        Args:
+            commands: List of commands to execute
+            timeout: Maximum overall timeout in seconds (default: 10 hours)
+            
+        Returns:
+            SimpleNamespace with returncode, stdout, stderr
+        """
+        import threading
+        from types import SimpleNamespace
+        
+        # Constants
+        OVERALL_TIMEOUT = 36000  # 10 hours
+        INACTIVITY_TIMEOUT = 600  # 10 minutes
+        
+        # Join commands with newlines to execute sequentially in same shell
+        processed_commands = []
+        for cmd in commands:
+            cmd_stripped = cmd.strip()
+            if cmd_stripped.startswith('cd '):
+                parts = cmd_stripped.split(None, 1)
+                if len(parts) > 1:
+                    target_dir = parts[1].strip()
+                    processed_commands.append(f"cd {target_dir} || exit 1")
+                else:
+                    processed_commands.append("cd ~ || exit 1")
+            else:
+                processed_commands.append(cmd_stripped)
+        
+        batch_script = "\n".join(processed_commands)
+        
+        stdout_lines = []
+        stderr_lines = []
+        last_output_time = [time.time()]
+        process_returncode = [None]
+        is_timed_out = [False]
+        timeout_reason = [""]
+        
+        def read_output(pipe, lines_list, is_stderr=False):
+            """Read output from pipe continuously"""
+            try:
+                for line in iter(pipe.readline, b''):
+                    if is_timed_out[0]:
+                        break
+                    decoded_line = line.decode('utf-8', errors='replace')
+                    lines_list.append(decoded_line)
+                    last_output_time[0] = time.time()
+            except Exception:
+                pass
+            finally:
+                pipe.close()
+        
+        try:
+            # Start process with Popen for streaming output
+            if self._platform == "windows":
+                process = subprocess.Popen(
+                    batch_script,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    cwd=str(self._current_directory)
+                )
+            else:
+                process = subprocess.Popen(
+                    ['bash', '-c', batch_script],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    cwd=str(self._current_directory)
+                )
+            
+            # Start threads to read output
+            stdout_thread = threading.Thread(target=read_output, args=(process.stdout, stdout_lines, False))
+            stderr_thread = threading.Thread(target=read_output, args=(process.stderr, stderr_lines, True))
+            stdout_thread.daemon = True
+            stderr_thread.daemon = True
+            stdout_thread.start()
+            stderr_thread.start()
+            
+            start_time = time.time()
+            
+            # Monitor process with dual timeout
+            while process.poll() is None:
+                current_time = time.time()
+                elapsed = current_time - start_time
+                since_last_output = current_time - last_output_time[0]
+                
+                # Check overall timeout (5 hours)
+                if elapsed > OVERALL_TIMEOUT:
+                    is_timed_out[0] = True
+                    timeout_reason[0] = f"Overall timeout exceeded ({OVERALL_TIMEOUT}s)"
+                    process.terminate()
+                    time.sleep(1)
+                    if process.poll() is None:
+                        process.kill()
+                    break
+                
+                # Check inactivity timeout (10 minutes)
+                if since_last_output > INACTIVITY_TIMEOUT:
+                    is_timed_out[0] = True
+                    timeout_reason[0] = f"No output for {INACTIVITY_TIMEOUT}s - process appears stuck"
+                    process.terminate()
+                    time.sleep(1)
+                    if process.poll() is None:
+                        process.kill()
+                    break
+                
+                time.sleep(0.1)
+            
+            # Wait for threads to finish
+            stdout_thread.join(timeout=2)
+            stderr_thread.join(timeout=2)
+            
+            # Get final return code
+            if is_timed_out[0]:
+                process_returncode[0] = -1
+            else:
+                process_returncode[0] = process.poll() or 0
+            
+            stdout = "".join(stdout_lines)
+            stderr = "".join(stderr_lines)
+            
+            if is_timed_out[0]:
+                stderr += f"\n[TIMEOUT: {timeout_reason[0]}]"
+                self.logger.warning(f"Batch command timed out: {timeout_reason[0]}")
+            
+            result = SimpleNamespace(
+                returncode=process_returncode[0],
+                stdout=stdout,
+                stderr=stderr
+            )
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"Batch execution failed: {e}")
+            return SimpleNamespace(
+                returncode=-1,
+                stdout="",
+                stderr=f"Execution failed: {str(e)}"
+            )
 
 
 # Global terminal history instance for easy access

@@ -1,18 +1,18 @@
 
 <div align="center">
 
-# 🤖 VEXIS-CLI-1.2
+# VEXIS-CLI-2.0
 
-![VEXIS CLI Banner](image-1.png)
+![VEXIS CLI image](VEXIS-CLI-2.png)
 
-[![Python](https://img.shields.io/badge/Python-3.9%2B-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.8%2B-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge&logo=opensource)](LICENSE)
-[![Status](https://img.shields.io/badge/Status-Active-orange?style=for-the-badge&logo=rocket)]()
-[![Providers](https://img.shields.io/badge/AI_Providers-13+-purple?style=for-the-badge&logo=artstation)](#ai-providers)
+[![Status](https://img.shields.io/badge/Status-Production_Ready-orange?style=for-the-badge&logo=rocket)]()
+[![Providers](https://img.shields.io/badge/AI_Providers-16+-purple?style=for-the-badge&logo=artstation)](#ai-providers)
 
-**🧠 Transform natural language into powerful terminal automation**
+**🧠 Advanced 5-Phase AI-powered terminal automation system**
 
-*Your intelligent CLI companion that understands what you want to do and gets it done*
+*Transform natural language into precise terminal commands with intelligent multi-phase processing*
 
 ---
 
@@ -22,251 +22,321 @@
 
 ---
 
-## ✨ Why VEXIS-CLI?
+## ✨ Why VEXIS-CLI-2.0?
 
-Tired of memorizing complex command-line syntax? **VEXIS-CLI** bridges the gap between human language and terminal commands. Just tell it what you want to accomplish in plain English, and watch as it intelligently executes your requests.
+**VEXIS-CLI-2.0** represents a quantum leap in command-line automation, featuring a sophisticated **5-Phase Pipeline Architecture** that delivers unprecedented accuracy and reliability in natural language to command translation.
 
-🎯 **"Create a backup of my documents folder"** → Automated backup script  
-🎯 **"Find all Python files with syntax errors"** → Code analysis and reporting  
-🎯 **"Set up a development environment for React"** → Complete project setup  
-
----
-
-## 🌟 Key Features
-
-### 🧠 **Intelligent Command Understanding**
-- Natural language processing that understands context and intent
-- Smart error recovery and self-correction
-- Learning from your usage patterns
-
-### ⚡ **Lightning-Fast Execution**
-- One-liner command execution
-- Parallel processing for complex tasks
-- Real-time progress feedback
-
-### 🔗 **Universal AI Provider Support**
-- **13+ AI providers** including local and cloud options
-- Seamless switching between providers
-- Optimized for each provider's strengths
-
-### 🛡️ **Enterprise-Grade Reliability**
-- Comprehensive error handling
-- Rollback capabilities for failed operations
-- Detailed logging and debugging
-
-### 🎨 **Beautiful User Experience**
-- Intuitive provider selection interface
-- Rich terminal output with syntax highlighting
-- Progress indicators and status updates
+🎯 **"Create a backup of my documents folder"** → Intelligent backup with verification  
+🎯 **"Find all Python files with syntax errors"** → Multi-stage code analysis with reporting  
+🎯 **"Set up a development environment for React"** → Complete environment setup with validation  
 
 ---
 
-## 🤖 AI Providers
+## 🌟 Revolutionary Features
 
-### 🏠 **Local & Hybrid**
+### 🧠 **5-Phase Pipeline Architecture**
+- **Phase 1**: Command Suggestion - AI analyzes intent and suggests approach
+- **Phase 2**: Command Extraction - Precise command isolation and validation  
+- **Phase 3**: Command Execution - Safe terminal execution with monitoring
+- **Phase 4**: Log Evaluation - Intelligent error analysis and retry logic
+- **Phase 5**: Summary Generation - Comprehensive result reporting
+
+### ⚡ **Advanced Execution Engine**
+- Multi-iteration error recovery with self-correction
+- Real-time progress tracking and status updates
+- Intelligent fallback mechanisms across providers
+- Comprehensive safety validation and rollback capabilities
+
+### 🔗 **Universal AI Provider Ecosystem**
+- **16+ AI providers** with unified interface abstraction
+- Automatic provider selection based on task requirements
+- Seamless fallback and load balancing across providers
+- Vision API support for image-based tasks
+
+### 🛡️ **Enterprise-Grade Architecture**
+- Zero-defect configuration management with validation
+- Comprehensive logging with structured output
+- Platform abstraction for cross-platform compatibility
+- Advanced error handling with detailed diagnostics
+
+### 🎨 **Modern User Experience**
+- Rich terminal interface with syntax highlighting
+- Interactive provider selection with performance metrics
+- Real-time execution monitoring and feedback
+- Comprehensive documentation and examples
+
+---
+
+## 🤖 AI Provider Ecosystem
+
+### 🏠 **Local & Privacy-First**
 <div align="center">
 
-**🦙 Ollama** - Privacy-first local AI with cloud backup  
-*Recommended models: `gemma3:4b`, `qwen2.5:3b`, `deepseek-r1:7b`*
+**🦙 Ollama** - Complete local AI integration  
+*Recommended 2026 models: `llama-4-scout-17b`, `deepseek-r1`, `qwen2.5:7b`*
 
 </div>
 
-### ☁️ **Cloud Powerhouses**
+### ☁️ **2026 Cloud Powerhouses**
 <div align="center">
 
-| Provider | Specialty | Speed | Best For |
-|----------|-----------|-------|----------|
-| 🚀 **Groq** | Ultra-fast inference | ⚡⚡⚡⚡⚡ | Real-time tasks |
-| 🔮 **Google Gemini** | Enterprise-grade | ⚡⚡⚡⚡ | Business applications |
-| 🧠 **OpenAI** | Advanced reasoning | ⚡⚡⚡⚡ | Complex problem-solving |
-| 🎭 **Anthropic** | Strong logic | ⚡⚡⚡⚡ | Analytical tasks |
-| ⚡ **xAI** | Real-time knowledge | ⚡⚡⚡⚡ | Current events |
-| 🦊 **Meta** | Open models | ⚡⚡⚡ | Research |
-| 🌊 **Mistral** | Multilingual | ⚡⚡⚡ | Global applications |
-| 🔷 **Azure** | Enterprise integration | ⚡⚡⚡ | Corporate environments |
-| 🏔️ **AWS Bedrock** | Scalable infrastructure | ⚡⚡⚡ | Large deployments |
-| 🎯 **Cohere** | Business workflows | ⚡⚡⚡ | Enterprise automation |
-| 🔍 **DeepSeek** | Advanced reasoning | ⚡⚡⚡ | Technical tasks |
-| 🤝 **Together AI** | Open-source hosting | ⚡⚡⚡ | Custom models |
+| Provider | 2026 Models | Speed | Specialty |
+|----------|-------------|-------|-----------|
+| 🚀 **Groq** | Llama 3.3 70B, GPT-OSS 120B | ⚡⚡⚡⚡⚡ | Ultra-fast inference |
+| 🔮 **Google** | Gemini 3.1 Pro, Gemini 3 Flash | ⚡⚡⚡⚡ | Enterprise reliability |
+| 🧠 **OpenAI** | GPT-5.4, GPT-5.4-pro, GPT-5-mini | ⚡⚡⚡⚡ | Advanced reasoning |
+| 🎭 **Anthropic** | Claude Opus 4.6, Claude Sonnet 4.5 | ⚡⚡⚡⚡ | Analytical excellence |
+| ⚡ **xAI** | Grok 4.20, Grok 4.20-beta | ⚡⚡⚡⚡ | Real-time knowledge |
+| 🦊 **Meta** | Llama 4 Scout 17B | ⚡⚡⚡ | Open-source leadership |
+| 🌊 **Mistral** | Latest multilingual models | ⚡⚡⚡ | Global applications |
+| 🔷 **Microsoft** | GPT-5.4-pro via Azure | ⚡⚡⚡ | Enterprise integration |
+| 🏔️ **AWS** | Claude Opus 4.6 via Bedrock | ⚡⚡⚡ | Scalable infrastructure |
+| 🎯 **Cohere** | Latest business models | ⚡⚡⚡ | Enterprise workflows |
+| 🔍 **DeepSeek** | DeepSeek R1, DeepSeek V4 | ⚡⚡⚡ | Technical reasoning |
+| 🤝 **Together** | Llama 4 hosting | ⚡⚡⚡ | Custom model deployment |
+| 🎮 **MiniMax** | Latest generation models | ⚡⚡⚡ | Creative tasks |
+| 🇨🇳 **Zhipu** | GLM latest models | ⚡⚡⚡ | Chinese language |
 
 </div>
 
-> 💡 **Our Top Picks**: For the best experience, we recommend **Groq** (speed), **Google Gemini** (reliability), **OpenAI** (capability), and **Ollama** (privacy).
+> 💡 **2026 Recommendations**: **Groq** (speed), **Google Gemini 3.1** (reliability), **OpenAI GPT-5.4** (capability), **Ollama Llama 4** (privacy)
 
 ---
 
 ## 🚀 Installation
 
-### 🎯 **Quick Start (3 commands)**
+### 🎯 **Zero-Configuration Quick Start**
 ```bash
-git clone https://github.com/vexis-project/VEXIS-CLI-1.2.git
-cd VEXIS-CLI-1.2
-python3 run.py "list files"  # Auto-installs dependencies!
+git clone https://github.com/vexis-project/VEXIS-CLI-2.0.git
+cd VEXIS-CLI-2.0
+python3 run.py "list files"  # Auto-setup and run!
 ```
 
 ### ✅ **System Requirements**
-- **Python 3.9+** 
-- **4GB+ RAM** for local models
-- **API keys** for cloud providers (get them in minutes)
+- **Python 3.8+** (wide compatibility)
+- **4GB+ RAM** for local models (8GB+ recommended for Llama 4)
+- **API keys** for cloud providers
 - **Optional**: Ollama for local AI (`curl -fsSL https://ollama.ai/install.sh | sh`)
+- **Tested on**: Ubuntu and macOS
+
+> ⚠️ **Note**: Bugs may occur with certain models or providers. If you encounter issues, please try selecting a different model or provider. We will fix the issue as soon as the cause is identified.
 
 ### 🎨 **First Run Experience**
-When you first run VEXIS-CLI, you'll see our beautiful provider selection interface:
+VEXIS-CLI-2.0 features an enhanced provider selection interface with real-time performance metrics:
 
-![Provider Selection Interface](Choose_model.png)
+![Enhanced Provider Selection](Choose_model.png)
 
 ---
 
 ## 💻 Usage Examples
 
-### 🏁 **Getting Started**
+### 🏁 **5-Phase Pipeline in Action**
 ```bash
-# Simple file operations
-python3 run.py "create a README for my project"
-python3 run.py "find all files larger than 10MB"
-python3 run.py "organize my downloads folder by date"
+# Simple operations with intelligent validation
+python3 run.py "create a comprehensive README for my project"
+python3 run.py "find and organize files larger than 10MB by date"
+python3 run.py "set up Python development environment with testing"
 
-# Development tasks
-python3 run.py "set up a Python virtual environment and install requirements"
-python3 run.py "run tests and generate coverage report"
-python3 run.py "deploy this project to GitHub Pages"
+# Complex multi-step tasks
+python3 run.py "analyze all Python files for security vulnerabilities"
+python3 run.py "deploy this React application to production with monitoring"
+python3 run.py "optimize system performance and generate detailed report"
 
-# System administration
-python3 run.py "check disk space and clean up temporary files"
-python3 run.py "monitor system resources for 5 minutes"
-python3 run.py "backup important configuration files"
+# Advanced automation
+python3 run.py "create automated backup system with encryption and verification"
+python3 run.py "monitor system resources and alert on anomalies for 24 hours"
 ```
 
-### 🎛️ **Advanced Options**
+### 🎛️ **Advanced Configuration**
 ```bash
-# Debug mode for developers
-python3 run.py "complex task" --debug
+# Use specific provider with 5-phase pipeline
+python3 run.py "complex task" --provider groq --model llama-3.3-70b-versatile
 
-# Skip provider selection (uses your preferred choice)
-python3 run.py "quick task" --no-prompt
+# Enable debug mode with detailed phase logging
+python3 run.py "debug task" --debug --phase-logging
 
-# Batch processing
-python3 run.py "process all images in ./photos --resize 800x600 --quality 85"
+# Skip interactive prompts (uses configured preferences)
+python3 run.py "quick automation" --no-prompt --auto-confirm
+
+# Vision-enabled tasks
+python3 run.py "analyze this screenshot and suggest improvements" --image screenshot.png
 ```
 
 ---
 
 ## ⚙️ Configuration
 
-### 📝 **Simple Setup**
-Edit `config.yaml` to personalize your experience:
+### 📝 **Advanced Configuration System**
+VEXIS-CLI-2.0 uses a hierarchical configuration system with validation:
 
 ```yaml
+# API Configuration
 api:
-  preferred_provider: "groq"  # Your go-to AI provider
+  preferred_provider: "groq"
   local_endpoint: "http://localhost:11434"
-  local_model: "gemma3:4b"     # Stable and fast
-  timeout: 120                 # Seconds to wait
-  max_retries: 3              # Auto-retry on failures
+  local_model: "llama-4-scout-17b"
+  timeout: 120
+  max_retries: 3
+  auto_fallback: true
 
-# Personalization
+# 5-Phase Engine Configuration
+engine:
+  command_timeout: 30
+  task_timeout: 300
+  max_iterations: 10
+  enable_phase_logging: false
+  auto_recovery: true
+
+# User Preferences
 user:
   name: "Your Name"
-  preferred_style: "concise"   # "concise", "detailed", "friendly"
-  auto_confirm: false         # Auto-confirm safe operations
+  preferred_style: "detailed"  # "concise", "detailed", "friendly"
+  auto_confirm: false
+  show_progress: true
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  file: "vexis.log"
+  json_format: false
+  console: true
+  max_file_size: 10485760  # 10MB
 ```
 
-### 🎯 **Model Recommendations**
-- **🏠 Local**: `gemma3:4b` (balanced), `qwen2.5:3b` (fast), `deepseek-r1:7b` (smart)
-- **☁️ Cloud**: `gemini-3.1-pro` (reliable), `gpt-5.4` (capable), `claude-opus-4.6` (analytical)
+### 🎯 **2026 Model Recommendations**
+- **🏠 Local**: `llama4-scout-17b` (balanced), `deepseek-r1` (reasoning), `qwen2.5:7b` (speed)
+- **☁️ Cloud**: `gpt-5.4-pro` (professional), `gemini-3.1-pro` (enterprise), `claude-opus-4.6` (analytical)
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Advanced Architecture
 
-### 🧠 **Two-Phase Intelligence Engine**
+### 🧠 **5-Phase Pipeline Engine**
 
 ```mermaid
-graph LR
-    A[Natural Language Input] --> B[Phase 1: Command Planning]
-    B --> C[Intent Analysis]
+graph TB
+    A[Natural Language Input] --> B[Phase 1: Command Suggestion]
+    B --> C[AI Intent Analysis]
     B --> D[Strategy Generation]
     B --> E[Risk Assessment]
-    C --> F[Phase 2: Terminal Execution]
+    C --> F[Phase 2: Command Extraction]
     D --> F
     E --> F
-    F --> G[Smart Execution]
-    F --> H[Error Recovery]
-    F --> I[Result Validation]
-    G --> J[Success!]
-    H --> J
-    I --> J
+    F --> G[Command Isolation]
+    F --> H[Validation & Sanitization]
+    G --> I[Phase 3: Command Execution]
+    H --> I
+    I --> J[Safe Terminal Execution]
+    I --> K[Real-time Monitoring]
+    J --> L[Phase 4: Log Evaluation]
+    K --> L
+    L --> M[Error Analysis]
+    L --> N[Retry Decision Logic]
+    M --> O[Phase 5: Summary Generation]
+    N --> O
+    O --> P[Comprehensive Reporting]
+    O --> Q[Success Verification]
+    P --> R[Task Complete]
+    Q --> R
 ```
 
-### � **Core Components**
-- **🎯 TwoPhaseEngine** - Orchestrates intelligent command execution
-- **🤖 ModelRunner** - Unified interface for all AI providers
-- **📝 CommandParser** - Advanced natural language understanding
-- **✅ TaskVerifier** - Safety checks and validation systems
+### 🏛️ **Core Components**
+- **🎯 FivePhaseEngine** - Advanced 5-phase pipeline orchestration
+- **🤖 ModelRunner** - Unified 16+ provider abstraction with fallback
+- **📝 CommandParser** - Enhanced NLP with context awareness
+- **✅ TaskVerifier** - Multi-layer validation and security
+- **🔄 TaskRobustnessManager** - Advanced error recovery and retry logic
+- **📊 TerminalHistory** - Comprehensive execution tracking
 
 ---
 
 ## 🛠️ Development & Contributing
 
-### 🤝 **How to Contribute**
-We love community contributions! Here's how you can help:
+### 🤝 **Contributing to VEXIS-CLI-2.0**
+We welcome contributions to our advanced AI automation platform:
 
-1. **🐛 Report Issues**: Found a bug? [Open an issue](https://github.com/vexis-project/VEXIS-CLI-1.2/issues)
-2. **💡 Feature Requests**: Have an idea? [Start a discussion](https://github.com/vexis-project/VEXIS-CLI-1.2/discussions)
-3. **🔧 Pull Requests**: Ready to code? Check our [contributing guidelines](CONTRIBUTING.md)
-4. **📖 Documentation**: Help improve docs - even small fixes help!
+1. **🐛 Bug Reports**: Use our detailed issue templates for precise reporting
+2. **💡 Feature Requests**: Propose enhancements to the 5-phase pipeline
+3. **🔧 Pull Requests**: Follow our strict code quality standards
+4. **📖 Documentation**: Help maintain our comprehensive docs
+5. **🧪 Testing**: Contribute to our extensive test coverage
 
-### 🧪 **Testing**
+### 🧪 **Advanced Testing Suite**
 ```bash
-# Run the test suite
-python3 -m pytest tests/
+# Run comprehensive test suite
+python3 -m pytest tests/ --cov=src
 
-# Test specific providers
-python3 test_cloud_models.py
-python3 check_environment.py
+# Test 5-phase pipeline components
+python3 test_five_phase_engine.py
+
+# Test provider integrations
+python3 test_cloud_models.py --all-providers
+
+# System validation
+python3 check_environment.py --full-validation
+python3 system_check.py --performance-test
+```
+
+### 🔧 **Development Tools**
+```bash
+# Dependency management
+python3 manage_sdks.py --install-all
+
+# Model validation
+python3 check_models.py --validate-2026-models
+
+# Performance benchmarking
+python3 test_improved_prompts.py --benchmark
 ```
 
 ---
 
-## 📚 Documentation
+## 📚 Comprehensive Documentation
 
-| Document | Description | Link |
-|----------|-------------|------|
-| 📖 **Detailed User Guide** | Comprehensive setup and usage | [DETAILED_GUIDE.md](./DETAILED_GUIDE.md) |
-| ⚙️ **Configuration** | Configuration options | [docs/CONFIGURATION.md](./docs/CONFIGURATION.md) |
-| 🔧 **Troubleshooting** | Common issues and solutions | [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md) |
+| Document | Focus | Link |
+|----------|-------|------|
+| 📖 **Architecture Guide** | 5-Phase pipeline deep dive | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) |
+| ⚙️ **Configuration Reference** | Complete configuration options | [docs/CONFIGURATION.md](./docs/CONFIGURATION.md) |
+| 🔧 **API Reference** | Provider integration guide | [docs/API_REFERENCE.md](./docs/API_REFERENCE.md) |
+| 🚀 **Deployment Guide** | Production deployment | [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) |
+| 🛠️ **Development Guide** | Contributing and development | [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) |
+| 🔍 **Troubleshooting** | Common issues and solutions | [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md) |
+| 🦙 **Ollama Integration** | Local AI setup and optimization | [docs/OLLAMA_INTEGRATION.md](./docs/OLLAMA_INTEGRATION.md) |
+| ⚡ **Error Handling** | Advanced error management | [docs/ERROR_HANDLING.md](./docs/ERROR_HANDLING.md) |
 
 ---
 
-## 🏆 Community & Support
+## 🏆 Community & Enterprise Support
 
 ### 💬 **Get Help**
-- 📖 [Documentation](./docs/)
-- 🐛 [Issue Tracker](https://github.com/vexis-project/VEXIS-CLI-1.2/issues)
-- 💬 [Discussions](https://github.com/vexis-project/VEXIS-CLI-1.2/discussions)
+- 📖 [Comprehensive Documentation](./docs/)
+- 🐛 [Advanced Issue Tracker](https://github.com/vexis-project/VEXIS-CLI-2.0/issues)
+- 💬 [Community Discussions](https://github.com/vexis-project/VEXIS-CLI-2.0/discussions)
+- 🏢 [Enterprise Support](mailto:enterprise@vexis-project.com)
 
-### ⭐ **Show Your Love**
-- **Star the repo** - It helps others discover VEXIS-CLI
-- **Share your use cases** - We love to see what you build!
+### ⭐ **Show Your Support**
+- **⭐ Star the repository** - Help others discover VEXIS-CLI-2.0
+- **🔄 Fork and contribute** - Build on our 5-phase architecture
+- **📝 Share your use cases** - Inspire the community with innovative applications
 
 ---
 
 <div align="center">
 
-## 🎉 Transform Your Terminal Experience
+## 🎉 Experience the Future of Terminal Automation
 
-**VEXIS-CLI makes command-line automation intuitive and accessible**
+**VEXIS-CLI-2.0: Where advanced AI meets precise command execution**
 
-[🚀 Get Started Now](#installation) • [⭐ Star on GitHub](https://github.com/vexis-project/VEXIS-CLI-1.2) • [📖 Read the Docs](./docs/)
-
----
-
-### Made with ❤️ by the VEXIS Project
-
-*Empowering developers with intelligent automation*
+[🚀 Get Started Now](#installation) • [⭐ Star on GitHub](https://github.com/vexis-project/VEXIS-CLI-2.0) • [📖 Explore Documentation](./docs/) • [🏢 Enterprise Support](mailto:enterprise@vexis-project.com)
 
 ---
 
-![VEXIS Logo](https://img.shields.io/badge/VEXIS-Project-blue?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K)
+### Built with ❤️ by the VEXIS Project
+
+*Pushing the boundaries of AI-powered automation*
+
+---
+
+![VEXIS Logo](https://img.shields.io/badge/VEXIS-2.0-Advanced%20AI%20Automation-blue?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K)
 
 </div>

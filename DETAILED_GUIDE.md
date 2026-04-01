@@ -1,4 +1,4 @@
-# VEXIS-CLI-1.2 Detailed User Guide
+# VEXIS-CLI-2.0 Detailed User Guide
 
 ## Table of Contents
 
@@ -15,9 +15,9 @@
 
 ## Getting Started
 
-### What is VEXIS-CLI-1.2?
+### What is VEXIS-CLI-2.0?
 
-VEXIS-CLI-1.2 is an intelligent command-line agent that transforms natural language instructions into executable terminal commands. It supports multiple AI providers and offers both local (privacy-first) and cloud-based options.
+VEXIS-CLI-2.0 is an intelligent command-line agent that transforms natural language instructions into executable terminal commands. It supports multiple AI providers and offers both local (privacy-first) and cloud-based options.
 
 ### Key Features
 
@@ -35,8 +35,8 @@ VEXIS-CLI-1.2 is an intelligent command-line agent that transforms natural langu
 
 ```bash
 # Clone the repository
-git clone https://github.com/vexis-project/VEXIS-CLI-1.2.git
-cd VEXIS-CLI-1.2
+git clone https://github.com/vexis-project/VEXIS-CLI-2.0.git
+cd VEXIS-CLI-2.0
 
 # Run your first command (dependencies auto-installed)
 python3 run.py "list files in current directory"
@@ -46,8 +46,8 @@ python3 run.py "list files in current directory"
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/vexis-project/VEXIS-CLI-1.2.git
-cd VEXIS-CLI-1.2
+git clone https://github.com/vexis-project/VEXIS-CLI-2.0.git
+cd VEXIS-CLI-2.0
 
 # 2. Create virtual environment (optional but recommended)
 python3 -m venv venv
@@ -171,7 +171,7 @@ python3 run.py "setup a Python development environment with Django"
    ollama pull deepseek-r1:7b
    ```
 
-4. **Configure VEXIS-CLI**:
+4. **Configure VEXIS-CLI-2**:
    ```yaml
    api:
      preferred_provider: "ollama"
@@ -248,7 +248,7 @@ Similar setup process for:
 
 ### Two-Phase Execution Engine
 
-VEXIS-CLI-1.2 uses a sophisticated two-phase execution:
+VEXIS-CLI-2.0 uses a sophisticated two-phase execution:
 
 1. **Command Planning Phase**:
    - Natural language understanding
@@ -390,7 +390,7 @@ python3 run.py "your command" --debug
 ### Q: Is my data secure?
 **A**: Local Ollama models keep data on your machine. Cloud providers send data to their servers.
 
-### Q: How do I update VEXIS-CLI?
+### Q: How do I update VEXIS-CLI-2?
 **A**: `git pull origin main` and reinstall dependencies if needed.
 
 ---
@@ -398,11 +398,11 @@ python3 run.py "your command" --debug
 ## Support & Community
 
 - **Documentation**: [Full docs](./docs/)
-- **Issues**: [GitHub Issues](https://github.com/vexis-project/VEXIS-CLI-1.2/issues)
+- **Issues**: [GitHub Issues](https://github.com/vexis-project/VEXIS-CLI-2.0/issues)
 - **Updates**: Check the repository regularly for updates
 
 ---
 
-**Version**: 1.0.0  
-**Last Updated**: 2026-03-12  
+**Version**: 2.0.0  
+**Last Updated**: 2026-04-01  
 **Compatibility**: Python 3.9+

@@ -51,19 +51,15 @@ class XAILLMClient(BaseLLM):
         - grok-2: Grok 2 - Previous generation
     """
 
-    DEFAULT_MODEL = "grok-4.20"
-    
+    DEFAULT_MODEL = "grok-4.1"
+
     MODEL_CONTEXT_WINDOWS = {
-        "grok-4.20": 128_000,
-        "grok-4.20-beta": 128_000,
-        "grok-4-2025-11-04": 32_768,
-        "grok-4-mini": 32_768,
-        "grok-3-mini": 32_768,
-        "grok-3": 32_768,
-        "grok-2": 32_768,
+        "grok-4.1": 131_072,
+        "grok-4.1-fast": 131_072,
+        "grok-4.1-thinking": 131_072,
     }
-    
-    VISION_MODELS = {"grok-4.20", "grok-4.20-beta", "grok-4-2025-11-04", "grok-4-mini"}
+
+    VISION_MODELS = {"grok-4.1", "grok-4.1-fast"}
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         self._api_key = api_key or os.getenv("XAI_API_KEY")
@@ -218,44 +214,8 @@ class XAILLMClient(BaseLLM):
             yield chunk
 
     def list_models(self) -> List[ModelInfo]:
-        return [
-            ModelInfo(
-                id="grok-4-2025-11-04",
-                name="Grok 4",
-                provider="xai",
-                context_window=32_768,
-                max_output_tokens=32_768,
-                supports_vision=True,
-                description="Latest flagship with advanced reasoning"
-            ),
-            ModelInfo(
-                id="grok-4-mini",
-                name="Grok 4 Mini",
-                provider="xai",
-                context_window=32_768,
-                max_output_tokens=32_768,
-                supports_vision=True,
-                description="Efficient version of Grok 4"
-            ),
-            ModelInfo(
-                id="grok-3-mini",
-                name="Grok 3 Mini",
-                provider="xai",
-                context_window=32_768,
-                max_output_tokens=32_768,
-                supports_vision=False,
-                description="Fast, cost-effective reasoning"
-            ),
-            ModelInfo(
-                id="grok-3",
-                name="Grok 3",
-                provider="xai",
-                context_window=32_768,
-                max_output_tokens=32_768,
-                supports_vision=False,
-                description="Previous generation flagship"
-            ),
-        ]
+        """Return empty list - model validation happens at API call time"""
+        return []
 
     def get_model_info(self, model_id: str) -> Optional[ModelInfo]:
         for model in self.list_models():

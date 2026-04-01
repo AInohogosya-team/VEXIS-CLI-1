@@ -1,7 +1,6 @@
 """
-Two-Phase Application Entry Point for CLI AI Agent System
-Implements the revised architecture: Task List Generation + Sequential Task Execution
-Zero-defect policy: robust CLI interface with two-phase execution
+5-Phase Pipeline Application Entry Point for CLI AI Agent System
+Implements the 5-phase pipeline architecture with CLI interface
 """
 
 import sys
@@ -11,46 +10,39 @@ import signal
 from typing import Optional, Dict, Any
 from pathlib import Path
 
-from ..core_processing.two_phase_engine import TwoPhaseEngine, ExecutionPhase
+from ..core_processing.five_phase_engine import FivePhaseEngine, PipelinePhase
 from ..utils.exceptions import AIAgentException
 from ..utils.logger import get_logger, setup_logging
 from ..utils.config import load_config
 
 
-class TwoPhaseAIAgent:
-    """Two-Phase AI Agent implementing the CLI architecture"""
+class FivePhaseAIAgent:
+    """5-Phase Pipeline AI Agent implementing the complete architecture"""
     
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(self, provider: str = None, model: str = None, config_path: Optional[str] = None):
         self.config = load_config(config_path) if config_path else load_config()
-        self.logger = get_logger("two_phase_app")
+        self.logger = get_logger("five_phase_app")
         
-        # Initialize two-phase engine
+        # Initialize 5-phase engine with provider and model
         engine_config = {
-            "click_delay": getattr(self.config.engine, 'click_delay', 0.1),
-            "typing_delay": getattr(self.config.engine, 'typing_delay', 0.05),
-            "scroll_duration": getattr(self.config.engine, 'scroll_duration', 0.5),
-            "drag_duration": getattr(self.config.engine, 'drag_duration', 0.3),
-            "screenshot_quality": getattr(self.config.engine, 'screenshot_quality', 95),
-            "screenshot_format": getattr(self.config.engine, 'screenshot_format', 'PNG'),
-            "max_task_retries": getattr(self.config.engine, 'max_task_retries', 3),
-            "max_command_retries": getattr(self.config.engine, 'max_command_retries', 3),
             "command_timeout": getattr(self.config.engine, 'command_timeout', 30),
             "task_timeout": getattr(self.config.engine, 'task_timeout', 300),
+            "max_iterations": getattr(self.config.engine, 'max_iterations', 10),
         }
         
-        self.engine = TwoPhaseEngine(engine_config)
+        self.engine = FivePhaseEngine(provider=provider, model=model, config=engine_config)
         
         # Setup signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
         
-        self.logger.info("Two-Phase AI Agent initialized")
+        self.logger.info("5-Phase Pipeline AI Agent initialized")
     
     def run(self, instruction: str, options: Dict[str, Any]) -> int:
-        """Run AI Agent with instruction using two-phase execution"""
+        """Run AI Agent with instruction using 5-phase pipeline"""
         try:
             self.logger.info(
-                "Starting Two-Phase AI Agent execution",
+                "Starting 5-Phase Pipeline AI Agent execution",
                 instruction=instruction,
                 options=options,
             )
@@ -66,33 +58,25 @@ class TwoPhaseAIAgent:
                 self.logger.error("Instruction cannot be empty")
                 return 1
             
-            # Execute instruction using two-phase engine
-            execution_context = self.engine.execute_instruction(instruction)
+            # Execute instruction using 5-phase engine
+            context = self.engine.execute_instruction(instruction)
             
-            # Simple success check
-            success = execution_context.phase == ExecutionPhase.COMPLETED
+            # Determine success based on final phase
+            success = context.current_phase == PipelinePhase.COMPLETED
             
-            # Print results
+            # Print results if not quiet mode
             if not options.get("quiet"):
-                print(f"\n{'='*60}")
-                print("TWO-PHASE EXECUTION SUMMARY")
-                print(f"{'='*60}")
-                print(f"Instruction: {instruction}")
-                print(f"Success: {success}")
-                print(f"Executed Commands: {len(execution_context.executed_commands)}")
-                if execution_context.error:
-                    print(f"Error: {execution_context.error}")
-                print(f"{'='*60}")
+                self._print_results(context, instruction, success)
             
             # Save results if requested
             if options.get("output"):
-                self._save_results(execution_context, options["output"])
+                self._save_results(context, options["output"])
             
             # Return exit code based on success
             return 0 if success else 1
                 
         except AIAgentException as e:
-            self.logger.error(f"Two-Phase AI Agent error: {e}")
+            self.logger.error(f"5-Phase AI Agent error: {e}")
             print(f"Error: {e}", file=sys.stderr)
             return 3
         except Exception as e:
@@ -100,7 +84,35 @@ class TwoPhaseAIAgent:
             print(f"Unexpected error: {e}", file=sys.stderr)
             return 4
     
-    def _save_results(self, execution_context, output_file: str):
+    def _print_results(self, context, instruction: str, success: bool):
+        """Print execution results to console"""
+        print(f"\n{'='*60}")
+        print("5-PHASE PIPELINE EXECUTION SUMMARY")
+        print(f"{'='*60}")
+        print(f"Instruction: {instruction}")
+        print(f"Success: {success}")
+        print(f"Iterations: {context.iteration_count}")
+        
+        if context.end_time and context.start_time:
+            duration = context.end_time - context.start_time
+            print(f"Duration: {duration:.2f} seconds")
+        
+        if context.error:
+            print(f"Error: {context.error}")
+        
+        # Print final phase
+        print(f"Final Phase: {context.current_phase.value}")
+        
+        # Print final summary if available
+        if context.final_summary:
+            print(f"\n{'='*60}")
+            print("FINAL SUMMARY")
+            print(f"{'='*60}")
+            print(context.final_summary)
+        
+        print(f"{'='*60}")
+    
+    def _save_results(self, context, output_file: str):
         """Save execution results to file"""
         try:
             import json
@@ -109,12 +121,20 @@ class TwoPhaseAIAgent:
             output_path.parent.mkdir(parents=True, exist_ok=True)
             
             results = {
-                "instruction": execution_context.metadata.get("instruction"),
-                "success": execution_context.phase == ExecutionPhase.COMPLETED,
-                "executed_commands": execution_context.executed_commands,
-                "error": execution_context.error,
-                "total_tasks": len(execution_context.task_list.tasks) if execution_context.task_list else 0,
+                "instruction": context.user_prompt,
+                "success": context.current_phase == PipelinePhase.COMPLETED,
+                "final_phase": context.current_phase.value,
+                "iterations": context.iteration_count,
+                "error": context.error,
+                "phase1_output": context.phase1_output,
+                "phase4_output": context.phase4_output,
+                "final_summary": context.final_summary,
+                "terminal_log": context.terminal_log,
             }
+            
+            # Add timing info if available
+            if context.end_time and context.start_time:
+                results["duration_seconds"] = context.end_time - context.start_time
             
             with open(output_path, 'w') as f:
                 json.dump(results, f, indent=2, default=str)
@@ -131,16 +151,15 @@ class TwoPhaseAIAgent:
         sys.exit(130)  # Standard exit code for SIGINT
     
     def shutdown(self):
-        """Shutdown Two-Phase AI Agent"""
-        self.logger.info("Shutting down Two-Phase AI Agent...")
-        # Add any cleanup needed here
-        self.logger.info("Two-Phase AI Agent shutdown complete")
+        """Shutdown 5-Phase AI Agent"""
+        self.logger.info("Shutting down 5-Phase AI Agent...")
+        self.logger.info("5-Phase AI Agent shutdown complete")
 
 
-def create_two_phase_argument_parser() -> argparse.ArgumentParser:
-    """Create two-phase command line argument parser"""
+def create_five_phase_argument_parser() -> argparse.ArgumentParser:
+    """Create 5-phase command line argument parser"""
     parser = argparse.ArgumentParser(
-        description="AI Agent - CLI-based automation with two-phase execution (Task Generation + Sequential Execution)",
+        description="AI Agent - 5-Phase Pipeline CLI automation (Command Suggestion → Extraction → Execution → Evaluation → Summary)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -148,6 +167,7 @@ Examples:
   %(prog)s "List all files in the current directory"
   %(prog)s --verbose "Install dependencies using pip"
   %(prog)s --output results.json "Set up a development environment"
+  %(prog)s --max-iterations 5 "Run a complex build process"
         """
     )
     
@@ -191,21 +211,15 @@ Examples:
         help="Log to specified file"
     )
     
+    # 5-Phase Pipeline options
+    parser.add_argument(
+        "--max-iterations",
+        type=int,
+        default=10,
+        help="Maximum number of Phase 2-4 iterations (default: 10)"
+    )
+    
     # Execution options
-    parser.add_argument(
-        "--max-task-retries",
-        type=int,
-        default=3,
-        help="Maximum number of retries for failed tasks (default: 3)"
-    )
-    
-    parser.add_argument(
-        "--max-command-retries",
-        type=int,
-        default=3,
-        help="Maximum number of retries for failed commands (default: 3)"
-    )
-    
     parser.add_argument(
         "--command-timeout",
         type=int,
@@ -217,16 +231,10 @@ Examples:
         "--task-timeout",
         type=int,
         default=300,
-        help="Timeout for individual tasks in seconds (default: 300)"
+        help="Timeout for tasks in seconds (default: 300)"
     )
     
     # Testing options
-    parser.add_argument(
-        "--test-mode",
-        action="store_true",
-        help="Run in test mode with simulated execution"
-    )
-    
     parser.add_argument(
         "--validate-only",
         action="store_true",
@@ -277,21 +285,17 @@ def validate_arguments(args: argparse.Namespace) -> bool:
         print("Error: Task timeout must be positive", file=sys.stderr)
         return False
     
-    if args.max_task_retries < 0:
-        print("Error: Max task retries cannot be negative", file=sys.stderr)
-        return False
-    
-    if args.max_command_retries < 0:
-        print("Error: Max command retries cannot be negative", file=sys.stderr)
+    if args.max_iterations < 1:
+        print("Error: Max iterations must be at least 1", file=sys.stderr)
         return False
     
     return True
 
 
 def main():
-    """Main entry point for CLI AI Agent"""
+    """Main entry point for 5-Phase Pipeline AI Agent"""
     # Parse arguments
-    parser = create_two_phase_argument_parser()
+    parser = create_five_phase_argument_parser()
     args = parser.parse_args()
     
     # Validate arguments
@@ -308,11 +312,11 @@ def main():
             print(f"Configuration validation failed: {e}", file=sys.stderr)
             return 1
     
-    # Create Two-Phase AI Agent
+    # Create 5-Phase AI Agent
     try:
-        agent = TwoPhaseAIAgent(args.config)
+        agent = FivePhaseAIAgent(args.config)
     except Exception as e:
-        print(f"Failed to initialize Two-Phase AI Agent: {e}", file=sys.stderr)
+        print(f"Failed to initialize 5-Phase AI Agent: {e}", file=sys.stderr)
         return 1
     
     # Prepare options
@@ -321,14 +325,12 @@ def main():
         "quiet": args.quiet,
         "output": args.output,
         "log_file": args.log_file,
-        "max_task_retries": args.max_task_retries,
-        "max_command_retries": args.max_command_retries,
+        "max_iterations": args.max_iterations,
         "command_timeout": args.command_timeout,
         "task_timeout": args.task_timeout,
-        "test_mode": args.test_mode,
     }
     
-    # Run Two-Phase AI Agent
+    # Run 5-Phase AI Agent
     start_time = time.time()
     exit_code = agent.run(args.instruction, options)
     execution_time = time.time() - start_time

@@ -48,18 +48,12 @@ class MetaLLMClient(BaseLLM):
     """
 
     DEFAULT_MODEL = "llama-4-scout-17b-16e-instruct"
-    
+
     MODEL_CONTEXT_WINDOWS = {
-        "llama-4-scout-17b-16e-instruct": 1_048_576,
-        "llama-4-maverick-17b-128e-instruct": 1_048_576,
-        "llama-3.3-70b-instruct": 128_000,
-        "llama-3.1-405b-instruct": 128_000,
-        "llama-3.1-70b-instruct": 128_000,
-        "llama-3.1-8b-instruct": 128_000,
-        "llama-3-70b-instruct": 8_192,
-        "llama-3-8b-instruct": 8_192,
+        "llama-4-scout-17b-16e-instruct": 10_000_000,
+        "llama-4-maverick-17b-128e-instruct": 1_000_000,
     }
-    
+
     VISION_MODELS = {"llama-4-scout-17b-16e-instruct", "llama-4-maverick-17b-128e-instruct"}
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
@@ -212,62 +206,8 @@ class MetaLLMClient(BaseLLM):
             yield chunk
 
     def list_models(self) -> List[ModelInfo]:
-        return [
-            ModelInfo(
-                id="llama-4-scout-17b-16e-instruct",
-                name="Llama 4 Scout",
-                provider="meta",
-                context_window=1_048_576,
-                max_output_tokens=32_768,
-                supports_vision=True,
-                description="Efficient model with 16 experts, 1M context"
-            ),
-            ModelInfo(
-                id="llama-4-maverick-17b-128e-instruct",
-                name="Llama 4 Maverick",
-                provider="meta",
-                context_window=1_048_576,
-                max_output_tokens=32_768,
-                supports_vision=True,
-                description="Powerful model with 128 experts, 1M context"
-            ),
-            ModelInfo(
-                id="llama-3.3-70b-instruct",
-                name="Llama 3.3 70B",
-                provider="meta",
-                context_window=128_000,
-                max_output_tokens=32_768,
-                supports_vision=False,
-                description="Strong performance, 128K context"
-            ),
-            ModelInfo(
-                id="llama-3.1-405b-instruct",
-                name="Llama 3.1 405B",
-                provider="meta",
-                context_window=128_000,
-                max_output_tokens=32_768,
-                supports_vision=False,
-                description="Large model for complex tasks"
-            ),
-            ModelInfo(
-                id="llama-3.1-70b-instruct",
-                name="Llama 3.1 70B",
-                provider="meta",
-                context_window=128_000,
-                max_output_tokens=32_768,
-                supports_vision=False,
-                description="Balanced performance"
-            ),
-            ModelInfo(
-                id="llama-3.1-8b-instruct",
-                name="Llama 3.1 8B",
-                provider="meta",
-                context_window=128_000,
-                max_output_tokens=32_768,
-                supports_vision=False,
-                description="Lightweight, fast model"
-            ),
-        ]
+        """Return empty list - model validation happens at API call time"""
+        return []
 
     def get_model_info(self, model_id: str) -> Optional[ModelInfo]:
         for model in self.list_models():

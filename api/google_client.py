@@ -63,28 +63,27 @@ class GoogleLLMClient(BaseLLM):
     
     Latest Models (as of 2026):
         - gemini-3.1-pro: Advanced reasoning and coding • Latest flagship
-        - gemini-3-flash: Fast, efficient general purpose • New
-        - gemini-2.5-flash: Fast, efficient general purpose
-        - gemini-2.5-pro: Advanced reasoning and coding
+        - gemini-3-flash: Fast and efficient • Latest stable release
+        - gemini-2.5-flash: Previous generation • Still supported
+        - gemini-1.5-pro: Legacy model • Phased out
     """
 
     # Default model to use
-    DEFAULT_MODEL = "gemini-3.1-pro"
+    DEFAULT_MODEL = "gemini-3.1-pro-preview"
     
     # Model context windows
     MODEL_CONTEXT_WINDOWS = {
-        "gemini-3.1-pro": 2_097_152,  # 2M tokens
-        "gemini-3-flash": 1_048_576,  # 1M tokens
-        "gemini-2.5-flash": 1_048_576,  # 1M tokens
+        "gemini-3.1-pro-preview": 2_097_152,
+        "gemini-3-flash-preview": 1_048_576,
+        "gemini-3.1-flash-lite-preview": 1_048_576,
         "gemini-2.5-pro": 1_048_576,
-        "gemini-1.5-flash": 1_048_576,
-        "gemini-1.5-pro": 2_097_152,  # 2M tokens
+        "gemini-2.5-flash": 1_048_576,
     }
     
     # Vision-capable models
     VISION_MODELS = {
-        "gemini-3.1-pro", "gemini-3-flash", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-flash-image",
-        "gemini-1.5-flash", "gemini-1.5-pro"
+        "gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-3.1-flash-lite-preview",
+        "gemini-2.5-pro", "gemini-2.5-flash",
     }
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
@@ -404,55 +403,14 @@ class GoogleLLMClient(BaseLLM):
                     description=f"Google Gemini model: {model_id}"
                 ))
         except Exception as e:
-            # Fallback to known models if API fails
-            models = self._get_fallback_models()
-        
+            # Return empty list instead of fallback models to avoid overriding user selection
+            models = []
+
         return models
-    
+
     def _get_fallback_models(self) -> List[ModelInfo]:
-        """Return fallback model list when API fails"""
-        return [
-            ModelInfo(
-                id="gemini-2.5-flash",
-                name="Gemini 2.5 Flash",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=8192,
-                supports_vision=True,
-                supports_streaming=True,
-                description="Fast, efficient model for most tasks"
-            ),
-            ModelInfo(
-                id="gemini-2.5-pro",
-                name="Gemini 2.5 Pro",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=8192,
-                supports_vision=True,
-                supports_streaming=True,
-                description="Advanced reasoning and coding"
-            ),
-            ModelInfo(
-                id="gemini-3.1-pro",
-                name="Gemini 3.1 Pro",
-                provider=self.provider_type.value,
-                context_window=2_097_152,
-                max_output_tokens=8192,
-                supports_vision=True,
-                supports_streaming=True,
-                description="Latest flagship with advanced reasoning and coding"
-            ),
-            ModelInfo(
-                id="gemini-3-flash",
-                name="Gemini 3 Flash",
-                provider=self.provider_type.value,
-                context_window=1_048_576,
-                max_output_tokens=8192,
-                supports_vision=True,
-                supports_streaming=True,
-                description="Fast and efficient general purpose model"
-            ),
-        ]
+        """Return empty list - no fallback models to avoid overriding user selection"""
+        return []
 
     def get_model_info(self, model_id: str) -> Optional[ModelInfo]:
         """Get information about a specific model"""
@@ -460,12 +418,8 @@ class GoogleLLMClient(BaseLLM):
         for model in models:
             if model.id == model_id or model.id.endswith(model_id):
                 return model
-        
-        # Check fallback models
-        for model in self._get_fallback_models():
-            if model.id == model_id:
-                return model
-        
+
+        # Return None if model not found - no fallback to avoid overriding user selection
         return None
 
     def count_tokens(self, text: str, model: Optional[str] = None) -> int:

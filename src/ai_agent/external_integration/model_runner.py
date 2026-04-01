@@ -1,5 +1,5 @@
 """
-Model Runner for CLI AI Agent System
+Model Runner for VEXIS-CLI-2 AI Agent System
 Multi-Provider Support: 13+ AI providers available
 """
 
@@ -15,9 +15,11 @@ from ..utils.config import load_config
 
 
 class TaskType(Enum):
-    """Task types for CLI Architecture"""
-    TASK_GENERATION = "task_generation"
-    COMMAND_PARSING = "command_parsing"
+    """Task types for 5-Phase CLI Architecture"""
+    PHASE1_COMMAND_SUGGESTION = "phase1_command_suggestion"
+    PHASE2_COMMAND_EXTRACTION = "phase2_command_extraction"
+    PHASE4_LOG_EVALUATION = "phase4_log_evaluation"
+    PHASE5_SUMMARY_GENERATION = "phase5_summary_generation"
 
 
 @dataclass
@@ -56,183 +58,15 @@ class PromptTemplate:
         self.templates = self._load_templates()
 
     def _load_templates(self) -> Dict[str, str]:
-        """Load prompt templates for CLI Architecture"""
+        """Load prompt templates for 5-Phase CLI Architecture"""
         return {
-            TaskType.TASK_GENERATION.value: """# CLI Task Planning Expert System
+            TaskType.PHASE1_COMMAND_SUGGESTION.value: '''I have received the instruction: "{user_prompt}". What commands should I run to carry this out? Please tell me. I can only use terminal commands, so do not suggest GUI operations. The OS I am using is {os_info}.''',
 
-You are an expert CLI automation assistant specializing in breaking down complex user instructions into precise, executable command-line steps.
+            TaskType.PHASE2_COMMAND_EXTRACTION.value: '''Please look at this: {phase_1_output}. This is a relatively long text with many explanations, but please put all the necessary commands into a single code block. You may use only one code block.''',
 
-## Mission
-Transform the user's natural language instruction into a sequential list of specific, actionable CLI commands that accomplish the exact goal requested.
+            TaskType.PHASE4_LOG_EVALUATION.value: '''I executed the commands to carry out the instruction {user_prompt}. This resulted in the following log: {full_terminal_log_so_far} However, since I am a beginner, I do not know if it succeeded or failed. IMPORTANT: If the task failed, you MUST include the word "failure" somewhere in your response. If it succeeded, simply confirm success without using the word "failure".''',
 
-## Context Analysis
-- **User Instruction**: {instruction}
-- **Operating System**: {os_info}
-- **Current Working Directory**: {current_directory}
-
-## Core Principles
-1. **Be Specific, Not Verbose** - Each step must be an exact CLI command, not a description
-2. **Think Sequentially** - Commands must build upon each other logically
-3. **Respect System State** - Only create/navigate directories when explicitly needed
-4. **Assume Standard Tools** - Use common CLI tools available on the target OS
-
-## Command Generation Rules
-
-### ✅ DO:
-- Output numbered steps (1., 2., 3., etc.)
-- Use exact CLI syntax with proper flags and arguments
-- Include file paths, URLs, or specific values when mentioned
-- Chain simple, logical operations
-- Consider error handling (e.g., check if directory exists before cd)
-- **NO STEP LIMITATIONS** - Generate as many steps as needed to complete the task fully
-
-### ❌ DO NOT:
-- Write conversational text or explanations
-- Use markdown formatting or code blocks
-- Include placeholder text like "[your-file-name]"
-- Skip steps assuming user will do them manually
-- Use Windows commands on macOS/Linux or vice-versa
-
-## OS-Specific Guidelines
-
-### macOS/Linux:
-- Use `open -a` for applications
-- Use standard Unix commands (ls, cd, mkdir, etc.)
-- Respect Unix file paths and permissions
-
-### Windows:
-- Use `start` for applications
-- Use Windows command syntax
-- Respect Windows file paths and CMD/PowerShell differences
-
-## Quality Examples
-
-**Example 1 - Application Launch**
-User: "open Chrome browser"
-1. open -a Google Chrome
-
-**Example 2 - Project Setup**
-User: "create a new Python project with git"
-1. mkdir my_python_project
-2. cd my_python_project
-3. git init
-4. touch README.md
-5. touch main.py
-
-**Example 3 - File Operations**
-User: "download a file from GitHub and extract it"
-1. curl -O https://github.com/user/repo/archive/main.zip
-2. unzip main.zip
-3. cd repo-main
-
-## Output Format
-```
-1. [exact CLI command]
-2. [exact CLI command]
-3. [exact CLI command]
-```
-
-## Critical Constraint
-Output ONLY the numbered command list. No explanations, no markdown, no conversational text. Each line must start with a number followed by a period and a space, then the exact command.
-
-**IMPORTANT**: Generate as many steps as required - there are NO limitations on the number of steps. Break down complex tasks into as many individual commands as needed for complete execution.
-
-Now analyze the user instruction and generate the precise command sequence:""",
-
-            TaskType.COMMAND_PARSING.value: """# CLI Command Generation Expert
-
-You are an expert CLI assistant that generates precise, contextually-aware commands based on task requirements and system state.
-
-## Current Situation
-- **Task**: {task_description}
-- **Operating System**: {os_info}
-- **Current Directory**: {current_directory}
-
-## Recent Activity Context
-{previous_terminal_actions}
-
-## Last Command Output
-{last_command_output}
-
-## Decision Framework
-
-### Step 1: Analyze Completion Status
-- Is the task already fully completed based on previous actions?
-- Are there any remaining subtasks or requirements?
-- Did the last command succeed or fail?
-
-### Step 2: Determine Next Action
-- **If task is complete**: Output `END`
-- **If previous step failed and needs retry**: Output `REGENERATE_STEP`
-- **If task needs continuation**: Generate the next specific command
-
-### Step 3: Command Generation Principles
-- Build upon previous successful commands
-- Don't repeat commands that were already executed
-- Use exact syntax with proper paths and flags
-- Consider the current working directory
-- Account for command outputs/errors
-
-## Command Selection Guidelines
-
-### Continue Task When:
-- Previous command succeeded but task isn't complete
-- Need to perform the next logical step
-- Must handle output from previous command
-
-### Use END When:
-- Task objective has been fully achieved
-- All required files are created/modified
-- User's original request is satisfied
-
-### Use REGENERATE_STEP When:
-- Previous command failed due to syntax/path issues
-- Need to retry with different approach
-- Command had no effect on task progress
-
-## Output Format
-```
-Reasoning: [Brief analysis of current situation and why this action is needed]
-Target: [What this command aims to accomplish]
-Command: [The exact CLI command or END/REGENERATE_STEP]
-```
-
-## Contextual Examples
-
-### Example 1 - Continuing Success
-Previous: `mkdir project` (SUCCESS)
-Task: "create Python project"
-```
-Reasoning: Directory created successfully, now need to initialize git repository
-Target: Git repository initialization
-Command: git init
-```
-
-### Example 2 - Task Complete
-Previous: `python3 main.py` (SUCCESS - script ran)
-Task: "run Python script"
-```
-Reasoning: Script executed successfully, task objective achieved
-Target: Task completion
-Command: END
-```
-
-### Example 3 - Retry Failed Command
-Previous: `cd non_existent_dir` (FAILED - no such directory)
-Task: "navigate to project directory"
-```
-Reasoning: Previous cd command failed because directory doesn't exist, need to create it first
-Target: Directory creation before navigation
-Command: REGENERATE_STEP
-```
-
-## Critical Instructions
-1. Always consider the full context before deciding
-2. Be precise about what needs to happen next
-3. Use plain text only - no markdown formatting
-4. Base decisions on actual command outcomes, not assumptions
-
-Now analyze the current situation and generate the appropriate response:"""
+            TaskType.PHASE5_SUMMARY_GENERATION.value: '''I received the instruction {user_prompt} and have been executing commands like this to carry it out. {full_terminal_log} Now, I need to explain to the person who gave the instruction what I did, how I did it, and what the results were. Please summarize this information and output it inside a code block.''',
         }
 
     def get_template(self, task_type: TaskType) -> str:
@@ -245,9 +79,14 @@ class ModelRunner:
 
     # Valid Ollama model names
     DEFAULT_OLLAMA_MODEL = "llama3.2:latest"
-    DEFAULT_GOOGLE_MODEL = "gemini-3.1-pro"
+    DEFAULT_GOOGLE_MODEL = "gemini-3.1-pro-preview"
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None, auto_install_sdks: bool = False):
+    def __init__(self, provider: str = None, model: str = None, config: Optional[Dict[str, Any]] = None, auto_install_sdks: bool = False):
+        # Direct provider and model from runtime arguments
+        self.provider = provider
+        self.model = model
+        
+        # Fallback to config if not provided
         self.config = config or load_config().api.__dict__
         self.logger = get_logger(__name__)
         
@@ -257,8 +96,8 @@ class ModelRunner:
 
         self.logger.info(
             "Model runner initialized",
-            preferred_provider=self.config.get("preferred_provider"),
-            default_model=self.DEFAULT_OLLAMA_MODEL,
+            provider=self.provider,
+            model=self.model,
         )
 
     def run_model(self, request: ModelRequest) -> ModelResponse:
@@ -271,19 +110,28 @@ class ModelRunner:
 
             # Format prompt
             prompt = self._format_prompt(request)
-            
+
             # Get system instructions for API request
             system_instructions = self._get_system_instructions(request.task_type)
 
-            # Use configured model directly - no provider preference logic
-            model_name = self.config.get("local_model")
+            # Use runtime provider and model if provided, otherwise fallback to settings
+            if self.provider and self.model:
+                provider_name = self.provider
+                model_name = self.model
+            else:
+                # Fallback to settings for backward compatibility
+                from ..utils.settings_manager import get_settings_manager
+                settings = get_settings_manager()
+                provider_name = settings.get_preferred_provider()
+                model_name = settings.get_model(provider_name)
+
+            if not provider_name:
+                raise ValidationError("No provider configured. Please select a provider first.")
+
             if not model_name:
-                raise ValidationError("No model configured. Please select a model first.")
-            
-            # Determine provider from model configuration
-            provider_name = "ollama"  # Default to ollama for local models
-            
-            # Create API request
+                raise ValidationError(f"No model configured for provider '{provider_name}'. Please select a model first.")
+
+            # Create API request with user's exact selection
             api_request = APIRequest(
                 prompt=prompt,
                 image_data=request.image_data,
@@ -304,7 +152,7 @@ class ModelRunner:
                 content=api_response.content,
                 task_type=request.task_type,
                 model=api_response.model or model_name,
-                provider=api_response.provider or preferred_provider,
+                provider=api_response.provider or provider_name,
                 tokens_used=api_response.tokens_used,
                 cost=api_response.cost,
                 latency=time.time() - start_time,
@@ -391,14 +239,12 @@ class ModelRunner:
         format_vars = {
             "instruction": request.prompt,
             "task_description": request.prompt,
+            "user_prompt": request.prompt,
         }
 
+        # Add context variables if available (e.g., phase_1_output for Phase 2)
         if request.context:
             format_vars.update(request.context)
-            if request.task_type == TaskType.COMMAND_PARSING:
-                format_vars.setdefault("previous_terminal_actions", "No previous actions")
-                format_vars.setdefault("last_command_output", "No previous output")
-                format_vars.setdefault("current_directory", "Unknown")
 
         format_vars.setdefault("os_info", "Unknown OS")
 
@@ -426,9 +272,9 @@ class ModelRunner:
 
     def _get_system_instructions(self, task_type: TaskType) -> str:
         """Get system instructions for better AI behavior"""
-        base_instructions = """# VEXIS-CLI AI Agent System Instructions
+        base_instructions = """# VEXIS-CLI-2 AI Agent System Instructions
 
-You are operating as part of the VEXIS-CLI automation system. Your responses directly impact system execution and user experience.
+You are operating as part of the VEXIS-CLI-2 automation system. Your responses directly impact system execution and user experience.
 
 ## Behavioral Guidelines
 1. **Precision Over Verbosity** - Be exact and concise
@@ -450,72 +296,8 @@ You are operating as part of the VEXIS-CLI automation system. Your responses dir
 - Consider edge cases and potential failure points
 - Ensure outputs match the expected format exactly"""
         
-        if task_type == TaskType.TASK_GENERATION:
-            return f"""{base_instructions}
-
-## Task Generation Specific Guidelines
-- Break complex tasks into logical, sequential steps
-- Each step must be a complete, executable command
-- Consider dependencies between steps
-- Include necessary setup and cleanup operations
-- Validate that the sequence accomplishes the user's goal
-
-## Error Prevention
-- Check for required tools or dependencies
-- Include error handling commands where appropriate
-- Use absolute paths when directory navigation is involved
-- Consider permission issues and access rights"""
-
-        elif task_type == TaskType.COMMAND_PARSING:
-            return f"""{base_instructions}
-
-## Command Parsing Specific Guidelines
-- Analyze the full context before generating commands
-- Build upon previous successful actions
-- Recognize when tasks are complete vs. need continuation
-- Distinguish between retry scenarios vs. new approaches
-- Maintain awareness of current working directory and system state
-
-## Decision Making
-- Use END only when the original task is fully satisfied
-- Use REGENERATE_STEP when previous attempts failed and need retry
-- Generate new commands when progress is still needed
-- Consider command outputs and error messages in decisions
-
-## Context Integration
-- Factor in all previous command outcomes
-- Respect the current file system state
-- Account for any errors or warnings from prior steps
-- Ensure commands are logically consistent with the workflow"""
-        
         return base_instructions
 
-    def generate_tasks(self, instruction: str, os_info: str, context: Optional[Dict[str, Any]] = None) -> ModelResponse:
-        """Phase 1: Generate task list from instruction and OS environment"""
-        enhanced_context = context or {}
-        enhanced_context["os_info"] = os_info
-
-        request = ModelRequest(
-            task_type=TaskType.TASK_GENERATION,
-            prompt=instruction,
-            context=enhanced_context,
-        )
-
-        return self.run_model(request)
-
-    def parse_command(self, task_description: str, os_info: str, context: Optional[Dict[str, Any]] = None) -> ModelResponse:
-        """Phase 2: Parse task description into CLI command"""
-        enhanced_context = context or {}
-        enhanced_context["os_info"] = os_info
-
-        request = ModelRequest(
-            task_type=TaskType.COMMAND_PARSING,
-            prompt=task_description,
-            context=enhanced_context,
-        )
-
-        return self.run_model(request)
-    
     def install_missing_sdks(self, providers: Optional[List[str]] = None, interactive: bool = True) -> Dict[str, bool]:
         """Install missing SDKs for specified providers"""
         return self.vision_client.install_missing_sdks(providers, interactive)
@@ -525,7 +307,7 @@ You are operating as part of the VEXIS-CLI automation system. Your responses dir
         self.vision_client.show_sdk_status(providers)
 
 
-def get_model_runner() -> ModelRunner:
-    """Get model runner instance (always fresh to use latest settings)"""
-    # Always create a new instance to ensure latest settings are loaded
-    return ModelRunner()
+def get_model_runner(provider: str = None, model: str = None) -> ModelRunner:
+    """Get model runner instance with optional provider and model"""
+    # Create instance with runtime provider and model
+    return ModelRunner(provider=provider, model=model)

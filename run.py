@@ -342,7 +342,7 @@ def bootstrap_environment():
 
 def show_help():
     """Show help message"""
-    print("VEXIS-1.1 AI Agent Runner")
+    print("VEXIS-CLI-2 AI Agent Runner")
     print("=" * 50)
     print("Usage: python3 run.py \"your instruction here\"")
     print()
@@ -428,19 +428,25 @@ def check_ollama_login_with_fallback():
     # Check if signed in (only for newer versions)
     if has_whoami:
         try:
-            result = subprocess.run(["ollama", "whoami"], 
+            result = subprocess.run(["ollama", "whoami"],
                                   capture_output=True, text=True, timeout=10)
-            if result.returncode != 0 or "not signed in" in result.stderr.lower():
+            # Check if signed in: returncode 0 AND output is not empty AND doesn't say "not signed in"
+            output_combined = (result.stdout or "") + (result.stderr or "")
+            is_signed_in = (result.returncode == 0 and
+                           output_combined.strip() and
+                           "not signed in" not in output_combined.lower())
+
+            if is_signed_in:
+                success_message("Ollama is signed in")
+                return True, "full"
+            else:
                 warning_message("Ollama is available but you are not signed in.")
                 print(f"{Colors.CYAN}Cloud models require signin. Local models will work.{Colors.RESET}")
                 print(f"{Colors.CYAN}Run 'ollama signin' to enable cloud models.{Colors.RESET}")
                 return True, "needs_signin"
-            else:
-                success_message("Ollama is signed in")
-                return True, "full"
         except Exception:
             return True, "local_only"
-    
+
     # Old version without whoami - assume local only
     return True, "local_only"
 
@@ -518,11 +524,8 @@ def prompt_for_google_api_key():
                 error_message("API key seems too short. Please check your key.")
                 continue
             
-            # Ask if user wants to save the key
-            save_key = input(f"{Colors.CYAN}Save this API key for future use? (y/n):{Colors.RESET} ").lower().strip()
-            should_save = save_key.startswith('y')
-            
-            return api_key, should_save
+            # API keys are not saved anymore - just return the key
+            return api_key, False
             
         except KeyboardInterrupt:
             print(f"\n{Colors.BRIGHT_YELLOW}Operation cancelled.{Colors.RESET}")
@@ -872,7 +875,9 @@ def configure_ollama_provider():
         info_message(f"Failed to pull Ollama model: {model}")
         return None
     
-    # Don't automatically set preferred provider - let user choose explicitly
+    # Set preferred provider to Ollama
+    settings_manager.set_preferred_provider("ollama")
+    
     return "ollama"
 
 def select_model_provider():
@@ -1004,7 +1009,7 @@ def select_model_provider():
         else:
             ollama_model = settings_manager.get_ollama_model()
             show_config_summary(current_provider, ollama_model)
-        return current_provider
+        return current_provider, settings_manager.get_model(current_provider) if current_provider else None
     
     
     # Handle provider selection
@@ -1015,7 +1020,7 @@ def select_model_provider():
             return select_model_provider()
         ollama_model = settings_manager.get_ollama_model()
         show_config_summary("ollama", ollama_model)
-        return "ollama"
+        return "ollama", ollama_model
         
     elif selected_provider == "google":
         provider, model = configure_google_provider()
@@ -1023,7 +1028,7 @@ def select_model_provider():
             # User cancelled API key entry - retry
             return select_model_provider()
         show_config_summary(provider, model)
-        return "google"
+        return provider, model
         
     elif selected_provider in ["openai", "anthropic", "xai", "meta", "groq", "deepseek", "together", "microsoft", "mistral", "amazon", "cohere", "minimax", "zhipuai"]:
         # Generic handler for all other providers
@@ -1032,7 +1037,7 @@ def select_model_provider():
             # User cancelled API key entry - retry
             return select_model_provider()
         show_config_summary(provider, model)
-        return selected_provider
+        return provider, model
 
 def configure_generic_provider(provider_name):
     """Generic configuration for cloud providers with arrow key model selection"""
@@ -1042,38 +1047,37 @@ def configure_generic_provider(provider_name):
     
     settings_manager = get_settings_manager()
     
-    # Provider-specific model options (updated to current 2026 models)
+    # Provider-specific model options (verified real models only - 2025-2026 latest)
     provider_models = {
         "openai": [
-            # Current/Latest Models
-            "gpt-5.4-mini (New)", "gpt-5.4-nano (New)", "gpt-5.4", "gpt-5.4-pro", "gpt-5-mini", "gpt-5-nano", "gpt-5", "gpt-5-pro", "gpt-5.1", "gpt-5.2", "gpt-5.2-pro",
-            "o3", "o3-mini", "o3-pro", "o4-mini",
-            "gpt-5-codex", "gpt-5.1-codex", "gpt-5.1-codex-max", "gpt-5.1-codex-mini", "gpt-5.2-codex", "gpt-5.3-codex",
-            "gpt-oss-20b", "gpt-oss-120b", "computer-use-preview", "omni-moderation-v1",
-            
-            # Legacy Models (will be categorized)
-            "gpt-4.1", "gpt-4.1-nano", "gpt-4.1-mini", "gpt-4o", "gpt-4o-mini", "gpt-4o-search-preview", "gpt-4o-mini-search", "gpt-4.5-preview",
-            "gpt-4-turbo", "gpt-4-turbo-preview", "gpt-4-32k", "gpt-4-0314", "gpt-4-0125-preview",
-            "gpt-3.5-turbo", "gpt-3.5-turbo-0301", "gpt-3.5-turbo-0613", "gpt-3.5-turbo-16k-0613", "gpt-3.5-turbo-instruct",
-            "o1", "o1-mini", "o1-pro", "o1-preview",
-            "code-davinci-002", "code-davinci-001", "code-cushman-002", "code-cushman-001",
-            "ada", "babbage", "curie", "davinci", "text-davinci-001", "text-davinci-002", "text-davinci-003",
-            "text-ada-001", "text-babbage-001", "text-curie-001",
-            "text-moderation", "text-moderation-007", "text-moderation-latest", "text-moderation-stable",
-            "codex-mini-latest"
+            "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano",
+            "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano",
+            "o3", "o3-mini", "o4-mini",
         ],
-        "anthropic": ["claude-opus-4.6", "claude-sonnet-4.6", "claude-sonnet-4.5"],
-        "xai": ["grok-4.20", "grok-4.20-beta"],
-        "meta": ["llama-4-scout-17b", "meta-llama-3.1-405b-instruct"],
-        "groq": ["llama-3.3-70b-versatile", "openai/gpt-oss-120b", "llama-3.1-8b-instant"],
-        "deepseek": ["deepseek-r1", "deepseek-v4"],
-        "together": ["meta-llama/Llama-4-Scout-17B-Instruct", "meta-llama/Llama-3.3-70B-Instruct-Turbo"],
-        "microsoft": ["gpt-5.4", "gpt-5.4-pro", "gpt-4o"],
-        "mistral": ["mistral-large-2411", "mistral-small-2409"],
-        "amazon": ["anthropic.claude-opus-4.6-v1:0", "anthropic.claude-sonnet-4.6-v1:0"],
-        "cohere": ["command-r-plus-08-2024", "command-r-08-2024"],
-        "minimax": ["minimax-m2.7 (Latest)", "minimax-m2.5", "minimax-m2 (Legacy)"],
-        "zhipuai": ["glm-5", "glm-5-turbo", "glm-4.7", "glm-4"]
+        "anthropic": [
+            "claude-opus-4-6-20260219",
+            "claude-sonnet-4-6-20260219",
+            "claude-opus-4-5-20251125",
+            "claude-sonnet-4-5-20251125",
+        ],
+        "xai": ["grok-4.1", "grok-4.1-fast", "grok-4.1-thinking"],
+        "meta": ["llama-4-scout-17b-16e-instruct", "llama-4-maverick-17b-128e-instruct"],
+        "groq": ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"],
+        "deepseek": ["deepseek-chat", "deepseek-coder", "deepseek-reasoner"],
+        "together": ["meta-llama/Llama-4-Scout-17B-16E-Instruct", "meta-llama/Llama-4-Maverick-17B-128E-Instruct"],
+        "microsoft": ["gpt-5.4", "gpt-5.4-mini", "gpt-4.1"],
+        "mistral": ["mistral-large-latest", "mistral-medium-latest", "mistral-small-latest"],
+        "amazon": ["anthropic.claude-opus-4-6-20260219-v1:0", "anthropic.claude-sonnet-4-6-20260219-v1:0"],
+        "cohere": ["command-r-plus", "command-r", "command"],
+        "minimax": ["MiniMax-Text-01", "abab6.5s"],
+        "zhipuai": ["glm-5", "glm-5.1", "glm-4-plus", "glm-4"],
+        "google": [
+            "gemini-3.1-pro-preview",
+            "gemini-3-flash-preview",
+            "gemini-3.1-flash-lite-preview",
+            "gemini-2.5-pro",
+            "gemini-2.5-flash",
+        ]
     }
     
     # API key environment variables
@@ -1118,12 +1122,13 @@ def configure_generic_provider(provider_name):
     # Use arrow key menu for model selection
     selected_model = select_model_with_arrows(provider_name, provider_models[provider_name])
     if not selected_model:
-        return None  # User cancelled selection
+        return None, None  # User cancelled selection
     
     # Save settings
     settings_manager.set_api_key(provider_name, api_key)
     settings_manager.set_model(provider_name, selected_model)
-    
+    settings_manager.set_preferred_provider(provider_name)
+
     print(f"{Colors.GREEN}✓ {provider_name.upper()} configured successfully!{Colors.RESET}")
     return provider_name, selected_model
 
@@ -1143,73 +1148,76 @@ def select_model_with_arrows(provider_name: str, models: list) -> Optional[str]:
     
     # Add models to menu with descriptions
     model_descriptions = {
-        # GPT-5 Series
-        "gpt-5.4-mini (New)": "GPT-5.4 Mini • New • Cost-optimized • Fast inference",
-        "gpt-5.4-nano (New)": "GPT-5.4 Nano • New • Ultra-lightweight • Edge devices",
-        "gpt-5.4": "GPT-5.4 • Flagship • Advanced reasoning & coding",
-        "gpt-5.4-pro": "GPT-5.4 Pro • Professional tier • Enhanced capabilities",
-        "gpt-5-mini": "GPT-5 Mini • Cost-optimized • Fast inference",
-        "gpt-5-nano": "GPT-5 Nano • Ultra-lightweight • Edge devices",
-        "gpt-5": "GPT-5 • Standard • Advanced capabilities",
-        "gpt-5-pro": "GPT-5 Pro • Professional • Enhanced features",
-        "gpt-5.1": "GPT-5.1 • Stable • Reliable performance",
-        "gpt-5.2": "GPT-5.2 • Enhanced • Improved reasoning",
-        "gpt-5.2-pro": "GPT-5.2 Pro • Professional • Advanced features",
-        
-        # GPT-4 Series
-        "gpt-4.1": "GPT-4.1 • Enhanced • Improved reasoning",
-        "gpt-4.1-nano": "GPT-4.1 Nano • Ultra-lightweight • Edge devices",
-        "gpt-4.1-mini": "GPT-4.1 Mini • Lightweight • Efficient",
-        "gpt-4o": "GPT-4 Omni • Multimodal • Strong capabilities",
-        "gpt-4o-mini": "GPT-4o Mini • Multimodal • Cost-effective",
-        "gpt-4o-search-preview": "GPT-4o Search • Enhanced search • Preview",
-        "gpt-4o-mini-search": "GPT-4o Mini Search • Cost search • Efficient",
-        "gpt-4.5-preview": "GPT-4.5 Preview • Next-gen • Advanced features",
-        
+        # GPT-5.4 Series (2026 Latest)
+        "gpt-5.4": "GPT-5.4 • OpenAI flagship • 1M context • Best reasoning & coding",
+        "gpt-5.4-mini": "GPT-5.4 Mini • Strong mini model • Coding & computer use",
+        "gpt-5.4-nano": "GPT-5.4 Nano • Cheapest GPT-5.4 • High volume tasks",
+
+        # GPT-4.1 Series
+        "gpt-4.1": "GPT-4.1 • 1M context • Smarter & more efficient",
+        "gpt-4.1-mini": "GPT-4.1 Mini • Fast & cost-effective",
+        "gpt-4.1-nano": "GPT-4.1 Nano • Ultra-fast • Cheapest",
+
         # Reasoning Models
-        "o1": "O1 • Advanced reasoning • Complex problem solving",
-        "o1-mini": "O1 Mini • Lightweight reasoning • Fast inference",
-        "o1-pro": "O1 Pro • Professional reasoning • Enhanced capabilities",
-        "o3": "O3 • Advanced reasoning • Latest generation",
-        "o3-mini": "O3 Mini • Lightweight reasoning • Efficient",
-        "o3-pro": "O3 Pro • Professional reasoning • Advanced features",
-        "o4-mini": "O4 Mini • Next-gen reasoning • Ultra-efficient",
-        
-        # Code Models
-        "gpt-5-codex": "GPT-5 Codex • Code generation • Advanced analysis",
-        "gpt-5.1-codex": "GPT-5.1 Codex • Code generation • Optimized",
-        "gpt-5.1-codex-max": "GPT-5.1 Codex Max • Maximum capability • Professional",
-        "gpt-5.1-codex-mini": "GPT-5.1 Codex Mini • Lightweight code • Fast",
-        "gpt-5.2-codex": "GPT-5.2 Codex • Enhanced code • Advanced features",
-        "gpt-5.3-codex": "GPT-5.3 Codex • Latest code • Advanced generation",
-        
-        # Specialized Models
-        "gpt-oss-20b": "GPT-OSS 20B • Open source • 20B parameters",
-        "gpt-oss-120b": "GPT-OSS 120B • Open source • 120B parameters",
-        "computer-use-preview": "Computer Use • Agent capabilities • Preview",
-        "omni-moderation-v1": "Omni Moderation • Content safety • Enterprise",
-        
-        # Other providers
-        "claude-opus-4.6": "Claude Opus 4.6 • Most advanced • Complex reasoning",
-        "claude-sonnet-4.6": "Claude Sonnet 4.6 • Latest • Near-Opus performance",
-        "claude-sonnet-4.5": "Claude Sonnet 4.5 • Enterprise • B2B workflows",
-        "grok-4.20": "Grok 4.20 • Real-time knowledge • Advanced reasoning",
-        "grok-4.20-beta": "Grok 4.20 Beta • Preview features",
-        "llama-4-scout-17b": "Meta's Llama 4 Scout • 17B • Latest generation",
-        "meta-llama-3.1-405b-instruct": "Meta's Llama 3.1 • 405B parameters",
-        "llama-3.3-70b-versatile": "Groq's Llama 3.3 • Fast inference",
-        "openai/gpt-oss-120b": "OpenAI GPT-OSS 120B • Open source • Powerful",
-        "llama-3.1-8b-instant": "Llama 3.1 8B • Fast & efficient",
-        "deepseek-r1": "DeepSeek R1 • Advanced reasoning • Uncensored",
-        "deepseek-v4": "DeepSeek V4 • Latest • 1T parameters • Efficient",
-        "meta-llama/Llama-4-Scout-17B-Instruct": "Together AI's Llama 4 Scout • Latest",
-        "meta-llama/Llama-3.3-70B-Instruct-Turbo": "Together AI's Llama 3.3 • Optimized",
-        "mistral-large-2411": "Latest Mistral Large • Advanced capabilities",
-        "mistral-small-2409": "Mistral Small • Efficient and fast",
-        "anthropic.claude-opus-4.6-v1:0": "Claude Opus 4.6 via AWS • Enterprise",
-        "anthropic.claude-sonnet-4.6-v1:0": "Claude Sonnet 4.6 via AWS • Latest",
-        "command-r-plus-08-2024": "Cohere Command R+ • Advanced reasoning",
-        "command-r-08-2024": "Cohere Command R • Efficient"
+        "o3": "O3 • Advanced reasoning • STEM & complex tasks • 200K context",
+        "o4-mini": "O4 Mini • Fast reasoning • Cost-effective • 200K context",
+        "o3-mini": "O3 Mini • Efficient reasoning • 200K context",
+
+        # Anthropic Claude 4.6 (Latest)
+        "claude-opus-4-6-20260219": "Claude Opus 4.6 • Most capable • 1M context • Agent teams",
+        "claude-sonnet-4-6-20260219": "Claude Sonnet 4.6 • Near-Opus performance • Balanced",
+        "claude-opus-4-5-20251125": "Claude Opus 4.5 • Outperforms humans on coding exams",
+        "claude-sonnet-4-5-20251125": "Claude Sonnet 4.5 • Efficient & capable",
+
+        # Google Gemini 3.1 (Latest)
+        "gemini-3.1-pro-preview": "Gemini 3.1 Pro • 2M context • Advanced agentic coding",
+        "gemini-3-flash-preview": "Gemini 3 Flash • Frontier performance • Cost-effective",
+        "gemini-3.1-flash-lite-preview": "Gemini 3.1 Flash Lite • Ultra-efficient • New",
+        "gemini-2.5-pro": "Gemini 2.5 Pro • 1M context • Advanced reasoning",
+        "gemini-2.5-flash": "Gemini 2.5 Flash • Fast & efficient",
+
+        # xAI Grok 4.1 (Latest)
+        "grok-4.1": "Grok 4.1 • State-of-the-art • #1 on LMArena • Real-time",
+        "grok-4.1-fast": "Grok 4.1 Fast • Quick responses • Dec 2025",
+        "grok-4.1-thinking": "Grok 4.1 Thinking • Deep reasoning mode",
+
+        # Meta Llama 4 (Latest)
+        "llama-4-scout-17b-16e-instruct": "Llama 4 Scout • 10M context • 17B active • Vision",
+        "llama-4-maverick-17b-128e-instruct": "Llama 4 Maverick • 1M context • 128 experts • Vision",
+
+        # Together AI Llama 4
+        "meta-llama/Llama-4-Scout-17B-16E-Instruct": "Llama 4 Scout • Together hosted • 10M context",
+        "meta-llama/Llama-4-Maverick-17B-128E-Instruct": "Llama 4 Maverick • Together hosted • 1M context",
+
+        # DeepSeek
+        "deepseek-chat": "DeepSeek Chat • General conversation",
+        "deepseek-coder": "DeepSeek Coder • Code generation specialist",
+        "deepseek-reasoner": "DeepSeek Reasoner • Advanced reasoning",
+
+        # Groq
+        "llama-3.3-70b-versatile": "Llama 3.3 70B • Groq hosted • Ultra-fast",
+        "llama-3.1-8b-instant": "Llama 3.1 8B • Groq hosted • Low latency",
+        "mixtral-8x7b-32768": "Mixtral 8x7B • Groq hosted • MoE architecture",
+
+        # Mistral
+        "mistral-large-latest": "Mistral Large • Latest version • Strong capabilities",
+        "mistral-medium-latest": "Mistral Medium • Balanced performance",
+        "mistral-small-latest": "Mistral Small • Fast & efficient",
+
+        # Cohere
+        "command-r-plus": "Command R+ • Cohere's best • Long context",
+        "command-r": "Command R • Balanced performance",
+        "command": "Command • Legacy Cohere model",
+
+        # Zhipu AI (GLM)
+        "glm-5": "GLM-5 • Zhipu AI latest • 744B parameters • Advanced coding",
+        "glm-5.1": "GLM-5.1 • Zhipu AI enhanced • Feb 2026 release",
+        "glm-4-plus": "GLM-4 Plus • Strong general performance",
+        "glm-4": "GLM-4 • Base model • Capable generalist",
+
+        # MiniMax
+        "MiniMax-Text-01": "MiniMax Text-01 • Latest general model",
+        "abab6.5s": "ABAB 6.5S • MiniMax chat model",
     }
     
     # Add each model to the menu
@@ -1284,53 +1292,78 @@ def select_openai_model_with_categories(models: list) -> Optional[str]:
 def get_model_description(model: str) -> str:
     """Get description for a specific model"""
     model_descriptions = {
-        # GPT-5 Series
-        "gpt-5.4-mini (New)": "GPT-5.4 Mini • New • Cost-optimized • Fast inference",
-        "gpt-5.4-nano (New)": "GPT-5.4 Nano • New • Ultra-lightweight • Edge devices",
-        "gpt-5.4": "GPT-5.4 • Flagship • Advanced reasoning & coding",
-        "gpt-5.4-pro": "GPT-5.4 Pro • Professional tier • Enhanced capabilities",
-        "gpt-5-mini": "GPT-5 Mini • Cost-optimized • Fast inference",
-        "gpt-5-nano": "GPT-5 Nano • Ultra-lightweight • Edge devices",
-        "gpt-5": "GPT-5 • Standard • Advanced capabilities",
-        "gpt-5-pro": "GPT-5 Pro • Professional • Enhanced features",
-        "gpt-5.1": "GPT-5.1 • Stable • Reliable performance",
-        "gpt-5.2": "GPT-5.2 • Enhanced • Improved reasoning",
-        "gpt-5.2-pro": "GPT-5.2 Pro • Professional • Advanced features",
-        
-        # GPT-4 Series
-        "gpt-4.1": "GPT-4.1 • Enhanced • Improved reasoning (Legacy)",
-        "gpt-4.1-nano": "GPT-4.1 Nano • Ultra-lightweight • Edge devices (Legacy)",
-        "gpt-4.1-mini": "GPT-4.1 Mini • Lightweight • Efficient (Legacy)",
-        "gpt-4o": "GPT-4 Omni • Multimodal • Strong capabilities (Legacy)",
-        "gpt-4o-mini": "GPT-4o Mini • Multimodal • Cost-effective (Legacy)",
-        "gpt-4o-search-preview": "GPT-4o Search • Enhanced search • Preview (Legacy)",
-        "gpt-4o-mini-search": "GPT-4o Mini Search • Cost search • Efficient (Legacy)",
-        "gpt-4.5-preview": "GPT-4.5 Preview • Next-gen • Advanced features (Legacy)",
-        
+        # GPT-5.4 Series (2026 Latest)
+        "gpt-5.4": "GPT-5.4 • OpenAI flagship • 1M context • Best reasoning & coding",
+        "gpt-5.4-mini": "GPT-5.4 Mini • Strong mini model • Coding & computer use",
+        "gpt-5.4-nano": "GPT-5.4 Nano • Cheapest GPT-5.4 • High volume tasks",
+
+        # GPT-4.1 Series
+        "gpt-4.1": "GPT-4.1 • 1M context • Smarter & more efficient",
+        "gpt-4.1-mini": "GPT-4.1 Mini • Fast & cost-effective",
+        "gpt-4.1-nano": "GPT-4.1 Nano • Ultra-fast • Cheapest",
+
         # Reasoning Models
-        "o1": "O1 • Advanced reasoning • Complex problem solving (Legacy)",
-        "o1-mini": "O1 Mini • Lightweight reasoning • Fast inference (Legacy)",
-        "o1-pro": "O1 Pro • Professional reasoning • Enhanced capabilities (Legacy)",
-        "o3": "O3 • Advanced reasoning • Latest generation",
-        "o3-mini": "O3 Mini • Lightweight reasoning • Efficient",
-        "o3-pro": "O3 Pro • Professional reasoning • Advanced features",
-        "o4-mini": "O4 Mini • Next-gen reasoning • Ultra-efficient",
-        
-        # Code Models
-        "gpt-5-codex": "GPT-5 Codex • Code generation • Advanced analysis",
-        "gpt-5.1-codex": "GPT-5.1 Codex • Code generation • Optimized",
-        "gpt-5.1-codex-max": "GPT-5.1 Codex Max • Maximum capability • Professional",
-        "gpt-5.1-codex-mini": "GPT-5.1 Codex Mini • Lightweight code • Fast",
-        "gpt-5.2-codex": "GPT-5.2 Codex • Enhanced code • Advanced features",
-        "gpt-5.3-codex": "GPT-5.3 Codex • Latest code • Advanced generation",
-        
-        # Specialized Models
-        "gpt-oss-20b": "GPT-OSS 20B • Open source • 20B parameters",
-        "gpt-oss-120b": "GPT-OSS 120B • Open source • 120B parameters",
-        "computer-use-preview": "Computer Use • Agent capabilities • Preview",
-        "omni-moderation-v1": "Omni Moderation • Content safety • Enterprise",
+        "o3": "O3 • Advanced reasoning • STEM & complex tasks • 200K context",
+        "o4-mini": "O4 Mini • Fast reasoning • Cost-effective • 200K context",
+        "o3-mini": "O3 Mini • Efficient reasoning • 200K context",
+
+        # Anthropic Claude 4.6 (Latest)
+        "claude-opus-4-6-20260219": "Claude Opus 4.6 • Most capable • 1M context • Agent teams",
+        "claude-sonnet-4-6-20260219": "Claude Sonnet 4.6 • Near-Opus performance • Balanced",
+        "claude-opus-4-5-20251125": "Claude Opus 4.5 • Outperforms humans on coding exams",
+        "claude-sonnet-4-5-20251125": "Claude Sonnet 4.5 • Efficient & capable",
+
+        # Google Gemini 3.1 (Latest)
+        "gemini-3.1-pro-preview": "Gemini 3.1 Pro • 2M context • Advanced agentic coding",
+        "gemini-3-flash-preview": "Gemini 3 Flash • Frontier performance • Cost-effective",
+        "gemini-3.1-flash-lite-preview": "Gemini 3.1 Flash Lite • Ultra-efficient • New",
+        "gemini-2.5-pro": "Gemini 2.5 Pro • 1M context • Advanced reasoning",
+        "gemini-2.5-flash": "Gemini 2.5 Flash • Fast & efficient",
+
+        # xAI Grok 4.1 (Latest)
+        "grok-4.1": "Grok 4.1 • State-of-the-art • #1 on LMArena • Real-time",
+        "grok-4.1-fast": "Grok 4.1 Fast • Quick responses • Dec 2025",
+        "grok-4.1-thinking": "Grok 4.1 Thinking • Deep reasoning mode",
+
+        # Meta Llama 4 (Latest)
+        "llama-4-scout-17b-16e-instruct": "Llama 4 Scout • 10M context • 17B active • Vision",
+        "llama-4-maverick-17b-128e-instruct": "Llama 4 Maverick • 1M context • 128 experts • Vision",
+
+        # Together AI Llama 4
+        "meta-llama/Llama-4-Scout-17B-16E-Instruct": "Llama 4 Scout • Together hosted • 10M context",
+        "meta-llama/Llama-4-Maverick-17B-128E-Instruct": "Llama 4 Maverick • Together hosted • 1M context",
+
+        # DeepSeek
+        "deepseek-chat": "DeepSeek Chat • General conversation",
+        "deepseek-coder": "DeepSeek Coder • Code generation specialist",
+        "deepseek-reasoner": "DeepSeek Reasoner • Advanced reasoning",
+
+        # Groq
+        "llama-3.3-70b-versatile": "Llama 3.3 70B • Groq hosted • Ultra-fast",
+        "llama-3.1-8b-instant": "Llama 3.1 8B • Groq hosted • Low latency",
+        "mixtral-8x7b-32768": "Mixtral 8x7B • Groq hosted • MoE architecture",
+
+        # Mistral
+        "mistral-large-latest": "Mistral Large • Latest version • Strong capabilities",
+        "mistral-medium-latest": "Mistral Medium • Balanced performance",
+        "mistral-small-latest": "Mistral Small • Fast & efficient",
+
+        # Cohere
+        "command-r-plus": "Command R+ • Cohere's best • Long context",
+        "command-r": "Command R • Balanced performance",
+        "command": "Command • Legacy Cohere model",
+
+        # Zhipu AI (GLM)
+        "glm-5": "GLM-5 • Zhipu AI latest • 744B parameters • Advanced coding",
+        "glm-5.1": "GLM-5.1 • Zhipu AI enhanced • Feb 2026 release",
+        "glm-4-plus": "GLM-4 Plus • Strong general performance",
+        "glm-4": "GLM-4 • Base model • Capable generalist",
+
+        # MiniMax
+        "MiniMax-Text-01": "MiniMax Text-01 • Latest general model",
+        "abab6.5s": "ABAB 6.5S • MiniMax chat model",
     }
-    
+
     return model_descriptions.get(model, f"{model} • Standard model")
 
 
@@ -1349,51 +1382,20 @@ def show_models_in_category(category_name: str, models: list, category_icon: str
     
     # Model descriptions for OpenAI models
     model_descriptions = {
-        # GPT-5 Series
-        "gpt-5.4-mini (New)": "GPT-5.4 Mini • New • Cost-optimized • Fast inference",
-        "gpt-5.4-nano (New)": "GPT-5.4 Nano • New • Ultra-lightweight • Edge devices",
-        "gpt-5.4": "GPT-5.4 • Flagship • Advanced reasoning & coding",
-        "gpt-5.4-pro": "GPT-5.4 Pro • Professional tier • Enhanced capabilities",
-        "gpt-5-mini": "GPT-5 Mini • Cost-optimized • Fast inference",
-        "gpt-5-nano": "GPT-5 Nano • Ultra-lightweight • Edge devices",
-        "gpt-5": "GPT-5 • Standard • Advanced capabilities",
-        "gpt-5-pro": "GPT-5 Pro • Professional • Enhanced features",
-        "gpt-5.1": "GPT-5.1 • Stable • Reliable performance",
-        "gpt-5.2": "GPT-5.2 • Enhanced • Improved reasoning",
-        "gpt-5.2-pro": "GPT-5.2 Pro • Professional • Advanced features",
-        
-        # GPT-4 Series
-        "gpt-4.1": "GPT-4.1 • Enhanced • Improved reasoning (Legacy)",
-        "gpt-4.1-nano": "GPT-4.1 Nano • Ultra-lightweight • Edge devices (Legacy)",
-        "gpt-4.1-mini": "GPT-4.1 Mini • Lightweight • Efficient (Legacy)",
-        "gpt-4o": "GPT-4 Omni • Multimodal • Strong capabilities (Legacy)",
-        "gpt-4o-mini": "GPT-4o Mini • Multimodal • Cost-effective (Legacy)",
-        "gpt-4o-search-preview": "GPT-4o Search • Enhanced search • Preview (Legacy)",
-        "gpt-4o-mini-search": "GPT-4o Mini Search • Cost search • Efficient (Legacy)",
-        "gpt-4.5-preview": "GPT-4.5 Preview • Next-gen • Advanced features (Legacy)",
-        
+        # GPT-5.4 Series (2026 Latest)
+        "gpt-5.4": "GPT-5.4 • OpenAI flagship • 1M context • Best reasoning & coding",
+        "gpt-5.4-mini": "GPT-5.4 Mini • Strong mini model • Coding & computer use",
+        "gpt-5.4-nano": "GPT-5.4 Nano • Cheapest GPT-5.4 • High volume tasks",
+
+        # GPT-4.1 Series
+        "gpt-4.1": "GPT-4.1 • 1M context • Smarter & more efficient",
+        "gpt-4.1-mini": "GPT-4.1 Mini • Fast & cost-effective",
+        "gpt-4.1-nano": "GPT-4.1 Nano • Ultra-fast • Cheapest",
+
         # Reasoning Models
-        "o1": "O1 • Advanced reasoning • Complex problem solving (Legacy)",
-        "o1-mini": "O1 Mini • Lightweight reasoning • Fast inference (Legacy)",
-        "o1-pro": "O1 Pro • Professional reasoning • Enhanced capabilities (Legacy)",
-        "o3": "O3 • Advanced reasoning • Latest generation",
-        "o3-mini": "O3 Mini • Lightweight reasoning • Efficient",
-        "o3-pro": "O3 Pro • Professional reasoning • Advanced features",
-        "o4-mini": "O4 Mini • Next-gen reasoning • Ultra-efficient",
-        
-        # Code Models
-        "gpt-5-codex": "GPT-5 Codex • Code generation • Advanced analysis",
-        "gpt-5.1-codex": "GPT-5.1 Codex • Code generation • Optimized",
-        "gpt-5.1-codex-max": "GPT-5.1 Codex Max • Maximum capability • Professional",
-        "gpt-5.1-codex-mini": "GPT-5.1 Codex Mini • Lightweight code • Fast",
-        "gpt-5.2-codex": "GPT-5.2 Codex • Enhanced code • Advanced features",
-        "gpt-5.3-codex": "GPT-5.3 Codex • Latest code • Advanced generation",
-        
-        # Specialized Models
-        "gpt-oss-20b": "GPT-OSS 20B • Open source • 20B parameters",
-        "gpt-oss-120b": "GPT-OSS 120B • Open source • 120B parameters",
-        "computer-use-preview": "Computer Use • Agent capabilities • Preview",
-        "omni-moderation-v1": "Omni Moderation • Content safety • Enterprise",
+        "o3": "O3 • Advanced reasoning • STEM & complex tasks • 200K context",
+        "o4-mini": "O4 Mini • Fast reasoning • Cost-effective • 200K context",
+        "o3-mini": "O3 Mini • Efficient reasoning • 200K context",
     }
     
     # Add models to menu
@@ -1651,7 +1653,7 @@ def main():
     
     # Show help
     if "--help" in sys.argv:
-        print("VEXIS-CLI - AI-Powered Command Line Assistant")
+        print("VEXIS-CLI-2 - AI-Powered Command Line Assistant")
         print("=" * 50)
         print("\nUsage: python3 run.py \"your instruction here\"")
         print("\nExamples:")
@@ -1663,6 +1665,7 @@ def main():
         print("  --sdk-status      Show AI provider SDK installation status")
         print("  --debug           Enable debug mode")
         print("  --no-prompt       Use saved provider preference without prompting")
+        print("  --max-iterations  Maximum Phase 2-4 iterations (default: 10)")
         print("  --help            Show this help message")
         print("\nSDK Management:")
         print("  python3 manage_sdks.py status          # Show SDK status")
@@ -1712,46 +1715,61 @@ def main():
         sys.exit(0)
     
     # Model selection - only prompt if not using --no-prompt flag
+    selected_provider = None
+    selected_model = None
+    
     if "--no-prompt" not in sys.argv:
-        selected_provider = select_model_provider()
+        result = select_model_provider()
+        if isinstance(result, tuple) and len(result) == 2:
+            selected_provider, selected_model = result
+        else:
+            selected_provider = result
         print(f"\nUsing provider: {selected_provider}")
+        if selected_model:
+            print(f"Using model: {selected_model}")
     else:
         from ai_agent.utils.settings_manager import get_settings_manager
         settings_manager = get_settings_manager()
         selected_provider = settings_manager.get_preferred_provider()
+        selected_model = settings_manager.get_model(selected_provider) if selected_provider else None
         print(f"\nUsing saved provider preference: {selected_provider}")
+        if selected_model:
+            print(f"Using saved model: {selected_model}")
     
     print(f"\nAI Agent executing: {instruction}")
     
+    max_iterations = 10
+    
+    # Parse max-iterations if provided
+    if "--max-iterations" in sys.argv:
+        try:
+            idx = sys.argv.index("--max-iterations")
+            if idx + 1 < len(sys.argv):
+                max_iterations = int(sys.argv[idx + 1])
+        except (ValueError, IndexError):
+            pass
+    
     try:
-        from ai_agent.user_interface.two_phase_app import TwoPhaseAIAgent
+        from ai_agent.user_interface.five_phase_app import FivePhaseAIAgent
         
-        # Update config with selected provider
+        # Create agent with selected provider and model
         config_path = current_dir / "config.yaml"
-        agent = TwoPhaseAIAgent(config_path=str(config_path) if config_path.exists() else None)
+        agent = FivePhaseAIAgent(
+            provider=selected_provider,
+            model=selected_model,
+            config_path=str(config_path) if config_path.exists() else None
+        )
         
-        # Update the vision client configuration with the selected provider
-        if hasattr(agent, 'engine') and hasattr(agent.engine, 'model_runner'):
-            model_runner = agent.engine.model_runner
-            if hasattr(model_runner, 'vision_client'):
-                # Update the vision client config
-                from ai_agent.utils.settings_manager import get_settings_manager
-                settings_manager = get_settings_manager()
-                
-                # Reload config with updated provider settings
-                updated_config = model_runner.config.copy()
-                updated_config['preferred_provider'] = selected_provider
-                updated_config['google_api_key'] = settings_manager.get_google_api_key()
-                updated_config['google_model'] = settings_manager.get_google_model()
-                
-                # Reinitialize vision client with updated config
-                model_runner.vision_client.config = updated_config
-        
-        # Run the instruction
-        options = {"debug": debug_mode}
+        # Run the instruction with 5-phase options
+        options = {
+            "debug": debug_mode,
+            "max_iterations": max_iterations,
+            "command_timeout": 30,
+            "task_timeout": 300
+        }
         result = agent.run(instruction, options)
         
-        if result:
+        if result == 0:
             print("\n✓ Task completed successfully")
         else:
             print("\n✗ Task failed")

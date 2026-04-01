@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for improved VEXIS-CLI prompts
+Test script for improved VEXIS-CLI-2 prompts
 Validates that the enhanced prompt engineering improvements work correctly
 """
 
@@ -55,7 +55,7 @@ def test_task_generation_prompt():
     # Check for system instructions
     try:
         system_instructions = runner._get_system_instructions(TaskType.TASK_GENERATION)
-        if system_instructions and "VEXIS-CLI AI Agent System Instructions" in system_instructions:
+        if system_instructions and "VEXIS-CLI-2 AI Agent System Instructions" in system_instructions:
             improvements_found.append("✅ System instructions present")
         
         if "Behavioral Guidelines" in system_instructions:
@@ -151,10 +151,10 @@ def test_system_instructions():
         command_sys_instructions = runner._get_system_instructions(TaskType.COMMAND_PARSING)
         
         # Check base instructions are present in both
-        if "VEXIS-CLI AI Agent System Instructions" in task_sys_instructions:
+        if "VEXIS-CLI-2 AI Agent System Instructions" in task_sys_instructions:
             improvements_found.append("✅ Task generation has base instructions")
         
-        if "VEXIS-CLI AI Agent System Instructions" in command_sys_instructions:
+        if "VEXIS-CLI-2 AI Agent System Instructions" in command_sys_instructions:
             improvements_found.append("✅ Command parsing has base instructions")
         
         # Check for task-specific instructions
@@ -188,7 +188,7 @@ def test_system_instructions():
 
 def main():
     """Run all tests"""
-    print("🚀 Testing VEXIS-CLI Prompt Engineering Improvements\n")
+    print("🚀 Testing VEXIS-CLI-2 Prompt Engineering Improvements\n")
     
     all_tests_passed = True
     

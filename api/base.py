@@ -356,15 +356,11 @@ def _estimate_cost(provider: str, model: str, prompt_tokens: int, completion_tok
             "gpt-5.4-mini": (0.50, 2.00),  # Cost-optimized
             "gpt-5.4-nano": (0.25, 1.00),  # Ultra-lightweight
             "gpt-5-mini": (0.50, 2.00),
-            "gpt-4o": (2.50, 10.0),
-            "gpt-4o-mini": (0.15, 0.60),
         },
         "anthropic": {
             "claude-opus-4.6": (15.0, 75.0),  # Latest Claude
             "claude-sonnet-4.6": (3.00, 15.0),  # Latest Sonnet
             "claude-sonnet-4.5": (3.0, 15.0),
-            "claude-3-opus": (15.0, 75.0),
-            "claude-3-sonnet": (3.0, 15.0),
         }
     }
     

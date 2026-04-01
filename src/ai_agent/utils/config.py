@@ -18,9 +18,9 @@ def _get_ollama_model_from_settings() -> str:
         from .settings_manager import get_settings_manager
         settings = get_settings_manager()
         model = settings.get_ollama_model()
-        return model if model else "llama3.2:latest"
+        return model if model else "llama4-scout-17b"
     except Exception:
-        return "llama3.2:latest"
+        return "llama4-scout-17b"
 
 
 @dataclass
@@ -73,7 +73,7 @@ class PerformanceConfig:
 
 @dataclass
 class EngineConfig:
-    """Two-phase engine configuration"""
+    """Five-phase engine configuration"""
     click_delay: float = 0.1
     typing_delay: float = 0.05
     scroll_duration: float = 0.5
@@ -221,28 +221,8 @@ class ConfigManager:
     def _create_config_from_raw(self) -> Config:
         """Create Config object from raw configuration"""
         try:
-            # Get API config dict and override with settings manager if needed
+            # Get API config dict
             api_config_dict = self._raw_config.get("api", {})
-            
-            # Override model values from settings manager to ensure user selection takes precedence
-            ollama_model = None
-            try:
-                # Read settings file directly to avoid circular dependency with SettingsManager
-                import json
-                settings_path = Path(__file__).parent.parent.parent.parent / ".vexis" / "settings.json"
-                if settings_path.exists():
-                    with open(settings_path, 'r') as f:
-                        settings_data = json.load(f)
-                        ollama_model = settings_data.get("ollama_model")
-                        if ollama_model:
-                            api_config_dict["local_model"] = ollama_model
-                            # Debug logging
-                            import logging
-                            logging.getLogger("config").info(f"Overriding config with settings model: {ollama_model}")
-            except Exception as e:
-                import logging
-                logging.getLogger("config").warning(f"Could not override from settings file: {e}")
-                pass  # Fall back to config file values or defaults
             
             return Config(
                 logging=LoggingConfig(**self._raw_config.get("logging", {})),
@@ -266,71 +246,8 @@ class ConfigManager:
             raise ConfigurationError("Configuration must be a dictionary")
     
     def save_config(self, config_path: Optional[Union[str, Path]] = None):
-        """Save current configuration to file"""
-        if not self._config:
-            self.load_config()
-        
-        save_path = Path(config_path) if config_path else self.config_path
-        if not save_path:
-            raise ConfigurationError("No config path specified for saving")
-        
-        # Convert config to dictionary
-        config_dict = {
-            "logging": {
-                "level": self._config.logging.level,
-                "file": self._config.logging.file,
-                "json_format": self._config.logging.json_format,
-                "console": self._config.logging.console,
-                "max_file_size": self._config.logging.max_file_size,
-                "backup_count": self._config.logging.backup_count,
-            },
-            "api": {
-                "local_endpoint": self._config.api.local_endpoint,
-                "local_model": self._config.api.local_model,
-                # API key intentionally excluded to prevent saving sensitive data
-                "preferred_provider": self._config.api.preferred_provider,
-                "timeout": self._config.api.timeout,
-                "max_retries": self._config.api.max_retries,
-                "retry_delay": self._config.api.retry_delay,
-            },
-            "security": {
-                "allowed_commands": self._config.security.allowed_commands,
-                "sanitize_text_input": self._config.security.sanitize_text_input,
-                "validate_file_paths": self._config.security.validate_file_paths,
-                "max_text_length": self._config.security.max_text_length,
-                "command_timeout": self._config.security.command_timeout,
-            },
-            "performance": {
-                "max_concurrent_tasks": self._config.performance.max_concurrent_tasks,
-                "task_timeout": self._config.performance.task_timeout,
-                "command_timeout": self._config.performance.command_timeout,
-                "api_timeout": self._config.performance.api_timeout,
-                "memory_limit_mb": self._config.performance.memory_limit_mb,
-            },
-            "platform": self._config.platform,
-            "custom": self._config.custom,
-        }
-        
-        # Save to file
-        save_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        try:
-            if save_path.suffix.lower() in ['.yaml', '.yml']:
-                with open(save_path, 'w') as f:
-                    yaml.dump(config_dict, f, default_flow_style=False, indent=2)
-            elif save_path.suffix.lower() == '.json':
-                with open(save_path, 'w') as f:
-                    json.dump(config_dict, f, indent=2)
-            else:
-                raise ConfigurationError(
-                    f"Unsupported config file format: {save_path.suffix}",
-                    config_file=str(save_path)
-                )
-        except Exception as e:
-            raise ConfigurationError(
-                f"Failed to save config file: {e}",
-                config_file=str(save_path)
-            )
+        """Save configuration is disabled - settings are not persisted"""
+        pass  # No-op - configuration is not saved to file
     
     def get(self, key: str, default: Any = None) -> Any:
         """Get configuration value by dot notation key"""
@@ -402,6 +319,5 @@ def get_config_manager() -> ConfigManager:
 
 
 def save_config(config_path: Optional[Union[str, Path]] = None):
-    """Save current configuration"""
-    config_manager = get_config_manager()
-    config_manager.save_config(config_path)
+    """Save configuration is disabled - settings are not persisted"""
+    pass  # No-op - configuration is not saved to file

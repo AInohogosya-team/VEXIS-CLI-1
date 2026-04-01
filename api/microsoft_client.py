@@ -41,24 +41,22 @@ class MicrosoftLLMClient(BaseLLM):
         response = client.generate("Explain quantum computing")
         print(response.content)
     
-    Latest Models (as of 2025):
+    Latest Models (as of 2026):
         - gpt-5.4: Latest flagship model
-        - gpt-4o: Powerful general purpose
-        - gpt-4o-mini: Efficient model
+        - gpt-5.4-pro: Professional tier
+        - gpt-5.4-mini: Cost-optimized
     """
 
     DEFAULT_MODEL = "gpt-5.4"
-    
+
     MODEL_CONTEXT_WINDOWS = {
         "gpt-5.4": 1_048_576,
+        "gpt-5.4-mini": 1_048_576,
+        "gpt-5.4-nano": 1_048_576,
         "gpt-5.4-pro": 1_048_576,
-        "gpt-5.4-mini": 400_000,
-        "gpt-5.4-nano": 200_000,
-        "gpt-4o": 128_000,
-        "gpt-4o-mini": 128_000,
     }
-    
-    VISION_MODELS = {"gpt-5.4", "gpt-5.4-pro", "gpt-4o", "gpt-4o-mini"}
+
+    VISION_MODELS = {"gpt-5.4", "gpt-5.4-mini", "gpt-5.4-pro"}
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         self._api_key = api_key or os.getenv("AZURE_OPENAI_API_KEY")
@@ -220,62 +218,8 @@ class MicrosoftLLMClient(BaseLLM):
             yield chunk
 
     def list_models(self) -> List[ModelInfo]:
-        return [
-            ModelInfo(
-                id="gpt-5.4",
-                name="GPT-5.4",
-                provider="microsoft",
-                context_window=1_048_576,
-                max_output_tokens=32_768,
-                supports_vision=True,
-                description="Latest flagship model"
-            ),
-            ModelInfo(
-                id="gpt-5.4-pro",
-                name="GPT-5.4 Pro",
-                provider="microsoft",
-                context_window=1_048_576,
-                max_output_tokens=32_768,
-                supports_vision=True,
-                description="Professional GPT-5.4 with enhanced capabilities"
-            ),
-            ModelInfo(
-                id="gpt-5.4-nano",
-                name="GPT-5.4 Nano",
-                provider="microsoft",
-                context_window=200_000,
-                max_output_tokens=32_768,
-                supports_vision=False,
-                description="Ultra-lightweight model for edge devices"
-            ),
-            ModelInfo(
-                id="gpt-5.4-mini",
-                name="GPT-5.4 Mini",
-                provider="microsoft",
-                context_window=400_000,
-                max_output_tokens=32_768,
-                supports_vision=False,
-                description="Efficient model for cost-effective inference"
-            ),
-            ModelInfo(
-                id="gpt-4o",
-                name="GPT-4o",
-                provider="microsoft",
-                context_window=128_000,
-                max_output_tokens=16_384,
-                supports_vision=True,
-                description="Powerful general purpose"
-            ),
-            ModelInfo(
-                id="gpt-4o-mini",
-                name="GPT-4o Mini",
-                provider="microsoft",
-                context_window=128_000,
-                max_output_tokens=16_384,
-                supports_vision=True,
-                description="Efficient model"
-            ),
-        ]
+        """Return empty list - model validation happens at API call time"""
+        return []
 
     def get_model_info(self, model_id: str) -> Optional[ModelInfo]:
         for model in self.list_models():

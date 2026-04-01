@@ -196,21 +196,6 @@ def create_client(
 ) -> BaseLLM:
     """
     Convenience function to create a client by provider name.
-    
-    Args:
-        provider: Provider name ("google", "openai", etc.)
-        api_key: API key
-        **kwargs: Additional configuration
-        
-    Returns:
-        Configured LLM client
-        
-    Raises:
-        ValueError: If provider is not supported
-        
-    Example:
-        client = create_client("google", api_key="...")
-        response = client.generate("Hello!")
     """
     provider_map = {
         "google": ProviderType.GOOGLE,
@@ -237,13 +222,6 @@ def create_client(
         "zhipu": ProviderType.ZHIPUAI,
         "glm": ProviderType.ZHIPUAI,
     }
-    
-    provider_type = provider_map.get(provider.lower())
-    if not provider_type:
-        raise ValueError(
-            f"Unknown provider: {provider}. "
-            f"Supported: {list(provider_map.keys())}"
-        )
     
     return LLMFactory.create(provider_type, api_key=api_key, **kwargs)
 

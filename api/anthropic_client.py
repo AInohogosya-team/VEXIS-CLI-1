@@ -50,21 +50,18 @@ class AnthropicLLMClient(BaseLLM):
         - claude-haiku-4-2025-01-15: Claude Haiku 4 - Fast, efficient
     """
 
-    DEFAULT_MODEL = "claude-sonnet-4-6-20251120"
-    
+    DEFAULT_MODEL = "claude-opus-4-6-20260219"
+
     MODEL_CONTEXT_WINDOWS = {
-        "claude-opus-4-6-20251120": 200_000,
-        "claude-opus-4-5-20250501": 200_000,
-        "claude-sonnet-4-6-20251120": 200_000,
-        "claude-sonnet-4-5-20250501": 200_000,
-        "claude-haiku-4-2025-01-15": 200_000,
-        "claude-haiku-3-5-20250620": 200_000,
+        "claude-opus-4-6-20260219": 200_000,
+        "claude-sonnet-4-6-20260219": 200_000,
+        "claude-opus-4-5-20251125": 200_000,
+        "claude-sonnet-4-5-20251125": 200_000,
     }
-    
+
     VISION_MODELS = {
-        "claude-opus-4-6-20251120", "claude-opus-4-5-20250501",
-        "claude-sonnet-4-6-20251120", "claude-sonnet-4-5-20250501",
-        "claude-haiku-4-2025-01-15", "claude-haiku-3-5-20250620"
+        "claude-opus-4-6-20260219", "claude-sonnet-4-6-20260219",
+        "claude-opus-4-5-20251125", "claude-sonnet-4-5-20251125",
     }
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
@@ -208,35 +205,8 @@ class AnthropicLLMClient(BaseLLM):
             yield chunk
 
     def list_models(self) -> List[ModelInfo]:
-        return [
-            ModelInfo(
-                id="claude-opus-4-6-20251120",
-                name="Claude Opus 4.6",
-                provider="anthropic",
-                context_window=200_000,
-                max_output_tokens=32_768,
-                supports_vision=True,
-                description="Most capable model for complex tasks"
-            ),
-            ModelInfo(
-                id="claude-sonnet-4-6-20251120",
-                name="Claude Sonnet 4.6",
-                provider="anthropic",
-                context_window=200_000,
-                max_output_tokens=32_768,
-                supports_vision=True,
-                description="Balanced performance and speed"
-            ),
-            ModelInfo(
-                id="claude-haiku-4-2025-01-15",
-                name="Claude Haiku 4",
-                provider="anthropic",
-                context_window=200_000,
-                max_output_tokens=32_768,
-                supports_vision=True,
-                description="Fast, efficient for simple tasks"
-            ),
-        ]
+        """Return empty list - model validation happens at API call time"""
+        return []
 
     def get_model_info(self, model_id: str) -> Optional[ModelInfo]:
         for model in self.list_models():
