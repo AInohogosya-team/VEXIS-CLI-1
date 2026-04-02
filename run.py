@@ -1016,7 +1016,11 @@ def select_model_provider():
     if selected_provider == "ollama":
         result = configure_ollama_provider()
         if result is None:
-            # Failed - retry configuration
+            # Failed - show error and let user choose again explicitly
+            from ai_agent.utils.interactive_menu import error_message
+            error_message("Ollama configuration failed or was cancelled")
+            print(f"\n{Colors.YELLOW}Press Enter to return to provider selection...{Colors.RESET}")
+            input()
             return select_model_provider()
         ollama_model = settings_manager.get_ollama_model()
         show_config_summary("ollama", ollama_model)

@@ -19,11 +19,14 @@ def select_ollama_model() -> Optional[str]:
     
     # Use curses-based hierarchical selector
     try:
+        print("🦊 Initializing Ollama model selector...")
         selector = get_curses_hierarchical_menu()
+        print("✓ Selector initialized, showing menu...")
         
         selected_model = selector.show()
         
         if selected_model is None:
+            print("⚠ No model selected (user cancelled or selection failed)")
             return settings_manager.get_ollama_model()
         
         # Save selection
@@ -36,6 +39,8 @@ def select_ollama_model() -> Optional[str]:
         return None
     except Exception as e:
         error_message(f"Selection failed: {e}")
+        import traceback
+        traceback.print_exc()
         # Fallback: show current model
         current_model = settings_manager.get_ollama_model()
         warning_message(f"Using current model: {current_model}")
