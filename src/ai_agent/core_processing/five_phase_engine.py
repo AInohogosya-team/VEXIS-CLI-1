@@ -85,7 +85,7 @@ class FivePhaseEngine:
             self.telegram_bot.terminal_history = self.terminal_history
         
         # Configuration
-        self.max_iterations = self.config.get("max_iterations", 300)
+        self.max_iterations = self.config.get("max_iterations", 10)
         self.command_timeout = self.config.get("command_timeout", 30)
         self.task_timeout = self.config.get("task_timeout", 300)
         self.enable_phase2_summarization = self.config.get("enable_phase2_summarization", True)

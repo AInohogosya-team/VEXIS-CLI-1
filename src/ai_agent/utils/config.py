@@ -326,11 +326,16 @@ class ConfigManager:
 _config_manager: Optional[ConfigManager] = None
 
 
-def load_config(config_path: Optional[Union[str, Path]] = None) -> Config:
-    """Load configuration (singleton pattern)"""
+def load_config(config_path: Optional[Union[str, Path]] = None, force_reload: bool = False) -> Config:
+    """Load configuration (singleton pattern)
+    
+    Args:
+        config_path: Path to config file
+        force_reload: If True, reload config even if already loaded (useful for different config paths)
+    """
     global _config_manager
     
-    if _config_manager is None:
+    if _config_manager is None or force_reload:
         _config_manager = ConfigManager(config_path)
     
     return _config_manager.load_config()

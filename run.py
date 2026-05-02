@@ -862,18 +862,18 @@ def configure_ollama_provider():
     try:
         login_ok, status = check_ollama_login_with_fallback()
         if not login_ok:
-            return None
+            return None, None
     except Exception as e:
         # Use enhanced error handling for Ollama check failures
         context = {
             'operation': 'check_ollama_status'
         }
         handle_ollama_error(str(e), context, display_to_user=True)
-        return None
+        return None, None
     
     # Handle different status levels
     if status == "not_installed":
-        return None
+        return None, None
     elif status == "local_only":
         info_message("Using Ollama with local models only (cloud models require update)")
     elif status == "needs_signin":
@@ -889,7 +889,7 @@ def configure_ollama_provider():
             'operation': 'select_model'
         }
         handle_ollama_error(str(e), context, display_to_user=True)
-        return None
+        return None, None
     
     if model is None:
         # User cancelled or selection failed - show current model and continue
@@ -904,12 +904,12 @@ def configure_ollama_provider():
     # Ensure the model is pulled locally
     if not ensure_ollama_model_available(model):
         info_message(f"Failed to pull Ollama model: {model}")
-        return None
+        return None, None
     
     # Set preferred provider to Ollama
     settings_manager.set_preferred_provider("ollama")
     
-    return "ollama"
+    return "ollama", model
 
 def select_execution_mode():
     """Select execution mode (Normal or Telegram) using curses arrow keys"""
@@ -942,10 +942,21 @@ def select_execution_mode():
     
     return selected_mode
 
-def select_model_provider():
-    """Main configuration screen for model provider selection using curses arrow keys"""
+def select_model_provider(_recursion_depth: int = 0):
+    """Main configuration screen for model provider selection using curses arrow keys
+    
+    Args:
+        _recursion_depth: Internal use for recursion limit (prevents stack overflow)
+    """
     from ai_agent.utils.settings_manager import get_settings_manager
     from ai_agent.utils.curses_menu import get_curses_menu
+    from ai_agent.utils.interactive_menu import Colors
+    
+    # Prevent infinite recursion (max 5 retries)
+    if _recursion_depth > 5:
+        from ai_agent.utils.interactive_menu import error_message
+        error_message("Too many configuration attempts. Please try again later.")
+        return None, None
     
     settings_manager = get_settings_manager()
     current_provider = settings_manager.get_preferred_provider()
@@ -1083,23 +1094,22 @@ def select_model_provider():
     
     # Handle provider selection
     if selected_provider == "ollama":
-        result = configure_ollama_provider()
-        if result is None:
+        provider, model = configure_ollama_provider()
+        if provider is None:
             # Failed - show error and let user choose again explicitly
             from ai_agent.utils.interactive_menu import error_message
             error_message("Ollama configuration failed or was cancelled")
             print(f"\n{Colors.YELLOW}Press Enter to return to provider selection...{Colors.RESET}")
             input()
-            return select_model_provider()
-        ollama_model = settings_manager.get_ollama_model()
-        show_config_summary("ollama", ollama_model)
-        return "ollama", ollama_model
+            return select_model_provider(_recursion_depth + 1)
+        show_config_summary(provider, model)
+        return provider, model
         
     elif selected_provider == "google":
         provider, model = configure_google_provider()
         if provider is None:
             # User cancelled API key entry - retry
-            return select_model_provider()
+            return select_model_provider(_recursion_depth + 1)
         show_config_summary(provider, model)
         return provider, model
         
@@ -1107,7 +1117,7 @@ def select_model_provider():
         provider, model = configure_generic_provider(selected_provider)
         if provider is None:
             # User cancelled API key entry - retry
-            return select_model_provider()
+            return select_model_provider(_recursion_depth + 1)
         show_config_summary(provider, model)
         return provider, model
         
@@ -1116,7 +1126,7 @@ def select_model_provider():
         provider, model = configure_generic_provider(selected_provider)
         if provider is None:
             # User cancelled API key entry - retry
-            return select_model_provider()
+            return select_model_provider(_recursion_depth + 1)
         show_config_summary(provider, model)
         return provider, model
 
@@ -1398,11 +1408,6 @@ def select_openai_model_with_categories(models: list) -> Optional[str]:
             latest_models.append(model)
         else:
             legacy_models.append(model)
-    
-    # Debug: Print model categorization
-    print(f"\n[DEBUG] Total models: {len(models)}")
-    print(f"[DEBUG] Latest models: {len(latest_models)}")
-    print(f"[DEBUG] Legacy models: {len(legacy_models)}")
     
     # Add latest models directly to menu (no category)
     for model in latest_models:
