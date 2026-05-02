@@ -292,6 +292,18 @@ You are operating as part of the VEXIS-CLI automation system. Your responses dir
 - Consider edge cases and potential failure points
 - Ensure outputs match the expected format exactly"""
         
+        # Add custom system prompt for Phase 1 only (Amore configuration)
+        if task_type == TaskType.PHASE1_COMMAND_SUGGESTION:
+            try:
+                config = load_config()
+                custom_prompt = config.custom_system_prompt
+                if custom_prompt and custom_prompt.strip():
+                    # Append custom prompt to base instructions
+                    base_instructions += f"\n\n## Custom System Prompt (User Configured)\n{custom_prompt.strip()}"
+                    self.logger.info("Custom system prompt injected into Phase 1")
+            except Exception as e:
+                self.logger.warning(f"Failed to load custom system prompt: {e}")
+        
         return base_instructions
 
     def install_missing_sdks(self, providers: Optional[List[str]] = None, interactive: bool = True) -> Dict[str, bool]:

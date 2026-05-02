@@ -40,6 +40,9 @@ security:
 
 # Execution Configuration
 execution:
+  # Execution mode: "auto" (ask on startup), "normal", or "telegram"
+  mode: "auto"
+  
   # Safety settings
   safety_mode: true          # Enable general safety checks
   dry_run: false             # Show commands without executing
@@ -100,6 +103,8 @@ telegram:
   allowed_user_ids: []        # List of allowed Telegram user IDs (empty = allow all)
   max_history_length: 50      # Maximum number of conversation history entries to keep
 
-# Execution Mode Configuration (NEW in v2.1)
-execution:
-  mode: "auto"                # Execution mode: "auto" (ask on startup), "normal", or "telegram"
+# Custom System Prompts (NEW in v2.2)
+# Custom prompts that users can freely configure and include in system prompts
+custom_system_prompt: ""      # Custom prompt to inject into Phase 1 system prompt only
+                              # Leave empty to disable. This applies only to Phase 1.
+

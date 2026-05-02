@@ -128,6 +128,9 @@ class Config:
     # Custom settings
     custom: Dict[str, Any] = field(default_factory=dict)
     
+    # Custom System Prompts (Amore configuration)
+    custom_system_prompt: str = ""  # Custom prompt to inject into Phase 1 system prompt
+    
     def get(self, key: str, default: Any = None) -> Any:
         """Get configuration value by dot notation key"""
         keys = key.split('.')
