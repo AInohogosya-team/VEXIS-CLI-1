@@ -183,11 +183,11 @@ class FivePhaseEngine:
                 should_continue = self._run_phase4(context)
                 
                 if not should_continue:
-                    # No "failure" in Phase 4 output - task is successful
+                    # No code block in Phase 4 output - task is successful
                     break
                 
                 # Continue to next iteration (Phase 2-4 loop)
-                self.logger.info(f"Phase 4 detected failure indicator, continuing to iteration {context.iteration_count + 1}")
+                self.logger.info(f"Phase 4 detected code block (task failed), continuing to iteration {context.iteration_count + 1}")
             
             if context.iteration_count >= context.max_iterations:
                 self.logger.warning("Maximum iterations reached, forcing completion")
@@ -498,8 +498,8 @@ class FivePhaseEngine:
         Send terminal logs to base model for evaluation.
         
         Returns:
-            True if the Phase 4 output contains the word "failure" (continue loop),
-            False if "failure" is not present (proceed to Phase 5)
+            True if the Phase 4 output contains a code block (task failed, continue loop),
+            False if no code block is present (task succeeded, proceed to Phase 5)
         """
         self.logger.info("Phase 4: Log Evaluation started")
         context.current_phase = PipelinePhase.PHASE4_LOG_EVALUATION
@@ -537,16 +537,16 @@ class FivePhaseEngine:
             
             context.phase4_output = response.content
             
-            # Check if output contains the word "failure" (case-insensitive)
-            has_failure = self._has_failure_indicator(response.content)
+            # Check if output contains a code block
+            has_code_block = self._has_code_block(response.content)
             
             self.logger.info("Phase 4 completed",
-                           has_failure=has_failure,
+                           has_code_block=has_code_block,
                            output_length=len(response.content))
             
-            # If "failure" is present, the task failed - continue Phase 2-4 loop
-            # If "failure" is NOT present, the task succeeded - proceed to Phase 5
-            return has_failure
+            # If code block is present, the task failed - continue Phase 2-4 loop
+            # If code block is NOT present, the task succeeded - proceed to Phase 5
+            return has_code_block
             
         except Exception as e:
             self.logger.error(f"Phase 4 failed: {e}")

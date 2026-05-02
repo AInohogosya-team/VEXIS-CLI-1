@@ -61,7 +61,15 @@ class PromptTemplate:
     def _load_templates(self) -> Dict[str, str]:
         """Load prompt templates for 5-Phase CLI Architecture"""
         return {
-            TaskType.PHASE1_COMMAND_SUGGESTION.value: '''I have received the instruction: "{user_prompt}". What commands should I run to carry this out? Please tell me. I can only use terminal commands, so do not suggest GUI operations. The OS I am using is {os_info}.{conversation_history}''',
+            TaskType.PHASE1_COMMAND_SUGGESTION.value: '''I have received the instruction: "{user_prompt}". What commands should I run to carry this out? Please tell me. I can only use terminal commands, so do not suggest GUI operations. The OS I am using is {os_info}.
+
+CRITICAL: Plan for success by considering:
+1. The primary approach to accomplish this task
+2. At least 2-3 alternative approaches if the primary method fails
+3. Common failure points and how to avoid them
+4. Verification steps to confirm the task succeeded (not just completed)
+
+Remember: The task is only successful when the goal is FULLY ACHIEVED. Provide comprehensive command suggestions with built-in fallback strategies.{conversation_history}''',
 
             TaskType.INPUT_SUMMARIZATION.value: '''Please summarize the following input into a single sentence. This is critical - you must provide exactly one sentence that captures the essence of the input. Do not use multiple sentences. Do not add explanations. Just provide the summary in a single sentence.
 
@@ -69,11 +77,41 @@ Input: {user_prompt}
 
 Summary (one sentence only):''',
 
-            TaskType.PHASE2_COMMAND_EXTRACTION.value: '''Please look at this: {phase_1_output}. This is a relatively long text with many explanations, but please put all the necessary commands into a single code block. You may use only one code block.{conversation_history}''',
+            TaskType.PHASE2_COMMAND_EXTRACTION.value: '''Please look at this: {phase_1_output}. This is a relatively long text with many explanations, but please put all the necessary commands into a single code block. You may use only one code block.
 
-            TaskType.PHASE4_LOG_EVALUATION.value: '''I executed the commands to carry out the instruction {user_prompt}. This resulted in the following log: {full_terminal_log_so_far} However, since I am a beginner, I do not know if it succeeded or failed. IMPORTANT: If the task failed, you MUST include the word "failure" somewhere in your response. If it succeeded, simply confirm success without using the word "failure".{conversation_history}''',
+CRITICAL EXTRACTION RULES:
+1. Extract ALL executable commands necessary to complete the task
+2. Include verification commands to confirm success (not just completion)
+3. If this is a retry attempt, extract the ALTERNATIVE approach commands
+4. Ensure the code block contains complete, runnable commands - never partial or example-only snippets
+5. Add error handling within the code block where possible (e.g., check if file exists before rm)
 
-            TaskType.PHASE5_SUMMARY_GENERATION.value: '''I received the instruction {user_prompt} and have been executing commands like this to carry it out. {full_terminal_log} Now, I need to explain to the person who gave the instruction what I did, how I did it, and what the results were. Please summarize this information and output it inside a code block.{conversation_history}''',
+The extracted code block will be executed directly in the terminal. It MUST be complete and functional.{conversation_history}''',
+
+            TaskType.PHASE4_LOG_EVALUATION.value: '''I executed the commands to carry out the instruction {user_prompt}. This resulted in the following log: {full_terminal_log_so_far} However, since I am a beginner, I do not know if it succeeded or failed.
+
+CRITICAL EVALUATION RULES:
+1. **Success vs Failure Definition** - The task is ONLY successful if the goal was FULLY ACHIEVED. Partial completion or workarounds that don't meet the original objective count as FAILURE.
+2. **Failure Response** - If the task failed, you MUST:
+   - Output a code block containing the corrected/alternative commands
+   - Analyze what went wrong and why
+   - Propose a COMPLETELY DIFFERENT alternative approach (Method B, C, etc.)
+3. **Success Response** - If the task succeeded, you MUST:
+   - Confirm success without including any code blocks
+   - Do NOT output code blocks under any circumstances when the task succeeds
+4. **Never Accept Defeat** - If the task failed, do not stop at analysis. Continue proposing alternative approaches until success is achieved.
+5. **Code Block Re-output** - On failure, you MUST re-output corrected code blocks. Success is determined by the absence of code blocks.{conversation_history}''',
+
+            TaskType.PHASE5_SUMMARY_GENERATION.value: '''I received the instruction {user_prompt} and have been executing commands like this to carry it out. {full_terminal_log} Now, I need to explain to the person who gave the instruction what I did, how I did it, and what the results were.
+
+CRITICAL SUMMARY REQUIREMENTS:
+1. **Explicit Success/Failure Declaration** - Clearly state whether the task SUCCEEDED or FAILED. Do not use ambiguous language.
+2. **Success Criteria** - Explain specifically how success was verified (not just that commands ran)
+3. **Retry History** - If multiple attempts were made, summarize what approaches were tried and why the final one succeeded
+4. **Final Result** - State what was actually achieved vs. what was requested
+5. **Output Format** - Place your entire summary inside a single code block
+
+Remember: "Completed" does NOT mean "Succeeded". Be explicit about whether the goal was fully achieved.{conversation_history}''',
         }
 
     def get_template(self, task_type: TaskType) -> str:
@@ -290,7 +328,14 @@ You are operating as part of the VEXIS-CLI automation system. Your responses dir
 - Double-check command syntax before outputting
 - Verify file paths and parameters are valid
 - Consider edge cases and potential failure points
-- Ensure outputs match the expected format exactly"""
+- Ensure outputs match the expected format exactly
+
+## Autonomous Task Completion & Persistence (CRITICAL)
+1. **Success vs Completion** - A task is finished ONLY when it SUCCEEDS, not merely when it completes. Even if a completion report is issued, the task is NOT finished if the result is a failure.
+2. **Never Give Up** - Do NOT terminate the task while any failure remains. Persistently and autonomously continue until success is achieved.
+3. **Flexible Alternative Methods** - When Method A fails, immediately pivot to a completely different approach (Method B, C, D...). Be creative and resourceful in finding alternative solutions.
+4. **Code Block Re-output** - Since success is determined by the presence of properly formatted code blocks, you MUST re-output code blocks as many times as necessary until the task succeeds. Never stop at "analysis" or "explanation" - always provide executable code blocks.
+5. **Proactive Error Recovery** - Anticipate failures before they occur and prepare fallback strategies. If an error occurs, immediately propose and execute the next best alternative without waiting for user input."""
         
         # Add custom system prompt for Phase 1 only (Amore configuration)
         if task_type == TaskType.PHASE1_COMMAND_SUGGESTION:
