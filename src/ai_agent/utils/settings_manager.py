@@ -371,8 +371,8 @@ class SettingsManager:
     
     def set_preferred_provider(self, provider: str):
         """Set preferred provider"""
-        valid_providers = ["ollama", "google", "groq", "openai", "anthropic", 
-                          "xai", "meta", "mistral", "microsoft", "amazon", 
+        valid_providers = ["ollama", "google", "groq", "openai", "anthropic",
+                          "xai", "meta", "mistral", "azure", "amazon",
                           "cohere", "deepseek", "together", "minimax", "zhipuai", "openrouter"]
         if provider not in valid_providers:
             raise ValueError(f"Provider must be one of: {valid_providers}")
@@ -412,13 +412,13 @@ class SettingsManager:
         """Generic API key setter for any provider"""
         provider_key_map = {
             "google": "google_api_key",
-            "groq": "groq_api_key", 
+            "groq": "groq_api_key",
             "openai": "openai_api_key",
             "anthropic": "anthropic_api_key",
             "xai": "xai_api_key",
             "meta": "meta_api_key",
             "mistral": "mistral_api_key",
-            "microsoft": "microsoft_api_key",
+            "azure": "microsoft_api_key",
             "amazon": "amazon_access_key",
             "cohere": "cohere_api_key",
             "deepseek": "deepseek_api_key",
@@ -439,13 +439,13 @@ class SettingsManager:
         """Generic model setter for any provider"""
         provider_model_map = {
             "google": "google_model",
-            "groq": "groq_model", 
+            "groq": "groq_model",
             "openai": "openai_model",
             "anthropic": "anthropic_model",
             "xai": "xai_model",
             "meta": "meta_model",
             "mistral": "mistral_model",
-            "microsoft": "microsoft_model",
+            "azure": "microsoft_model",
             "amazon": "amazon_model",
             "cohere": "cohere_model",
             "deepseek": "deepseek_model",
@@ -466,13 +466,13 @@ class SettingsManager:
         """Generic API key getter for any provider"""
         provider_key_map = {
             "google": "google_api_key",
-            "groq": "groq_api_key", 
+            "groq": "groq_api_key",
             "openai": "openai_api_key",
             "anthropic": "anthropic_api_key",
             "xai": "xai_api_key",
             "meta": "meta_api_key",
             "mistral": "mistral_api_key",
-            "microsoft": "microsoft_api_key",
+            "azure": "microsoft_api_key",
             "amazon": "amazon_access_key",
             "cohere": "cohere_api_key",
             "deepseek": "deepseek_api_key",
@@ -491,13 +491,13 @@ class SettingsManager:
         """Generic model getter for any provider"""
         provider_model_map = {
             "google": "google_model",
-            "groq": "groq_model", 
+            "groq": "groq_model",
             "openai": "openai_model",
             "anthropic": "anthropic_model",
             "xai": "xai_model",
             "meta": "meta_model",
             "mistral": "mistral_model",
-            "microsoft": "microsoft_model",
+            "azure": "microsoft_model",
             "amazon": "amazon_model",
             "cohere": "cohere_model",
             "deepseek": "deepseek_model",

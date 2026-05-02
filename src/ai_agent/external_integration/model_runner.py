@@ -210,7 +210,9 @@ class ModelRunner:
                 )
                 
                 # Enhanced error handling for authentication issues
-                if "Authentication required" in model_response.error:
+                auth_error_keywords = ['authentication', 'unauthorized', '401', '403', 'api key', 'credential']
+                error_lower = (model_response.error or '').lower()
+                if any(keyword in error_lower for keyword in auth_error_keywords):
                     try:
                         from ..utils.ollama_error_handler import handle_ollama_error
                         context = {
@@ -219,22 +221,26 @@ class ModelRunner:
                         }
                         handle_ollama_error(model_response.error, context, display_to_user=True)
                         
-                        # Prompt user to sign in
-                        import sys
-                        if sys.stdin.isatty():  # Only prompt if running in terminal
-                            try:
-                                choice = input("\nWould you like to sign in to Ollama now? (y/n): ").lower().strip()
-                                if choice in ['y', 'yes']:
-                                    import subprocess
-                                    print("\n🔐 Opening Ollama sign-in...")
-                                    result = subprocess.run(["ollama", "signin"], capture_output=False, text=True)
-                                    if result.returncode == 0:
-                                        print("✓ Sign-in initiated. Please complete it in your browser.")
-                                        print("Then try running your command again.")
-                                    else:
-                                        print("✗ Failed to initiate sign-in.")
-                            except (KeyboardInterrupt, EOFError):
-                                print("\nOperation cancelled.")
+                        # Prompt user to sign in (Ollama-specific)
+                        if model_response.provider == 'ollama':
+                            import sys
+                            if sys.stdin.isatty():  # Only prompt if running in terminal
+                                try:
+                                    choice = input("\nWould you like to sign in to Ollama now? (y/n): ").lower().strip()
+                                    if choice in ['y', 'yes']:
+                                        import subprocess
+                                        print("\n🔐 Opening Ollama sign-in...")
+                                        try:
+                                            result = subprocess.run(["ollama", "signin"], capture_output=False, text=True)
+                                            if result.returncode == 0:
+                                                print("✓ Sign-in initiated. Please complete it in your browser.")
+                                                print("Then try running your command again.")
+                                            else:
+                                                print("✗ Failed to initiate sign-in.")
+                                        except FileNotFoundError:
+                                            print("✗ Ollama command not found. Please ensure Ollama is installed.")
+                                except (KeyboardInterrupt, EOFError):
+                                    print("\nOperation cancelled.")
                     except ImportError:
                         pass  # Fallback to just logging the error
 
@@ -267,6 +273,9 @@ class ModelRunner:
 
         if request.task_type not in TaskType:
             raise ValidationError("Invalid task type", "task_type", request.task_type)
+
+        if request.timeout < 1 or request.timeout > 300:
+            raise ValidationError("Invalid timeout (must be 1-300 seconds)", "timeout", request.timeout)
 
     def _format_prompt(self, request: ModelRequest) -> str:
         """Format prompt based on task type and context"""

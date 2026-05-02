@@ -92,12 +92,12 @@ class MultiProviderVisionAPIClient:
     def __init__(self, config: Optional[Dict[str, Any]] = None, auto_install_sdks: bool = False):
         # Handle config properly
         if config is None:
-            config = load_config()
+            config = load_config().api.__dict__
         elif hasattr(config, 'api'):
             # It's a Config object, get the api dict
             config = config.api.__dict__
         
-        self.config = config or load_config().api.__dict__
+        self.config = config or {}
         self.logger = get_logger(__name__)
         
         # Initialize Ollama provider (always available)
@@ -130,7 +130,7 @@ class MultiProviderVisionAPIClient:
             'xai': (ProviderType.XAI, settings.get_xai_api_key),
             'meta': (ProviderType.META, settings.get_meta_api_key),
             'mistral': (ProviderType.MISTRAL, settings.get_mistral_api_key),
-            'microsoft': (ProviderType.MICROSOFT, settings.get_microsoft_api_key),
+            'azure': (ProviderType.MICROSOFT, settings.get_microsoft_api_key),
             'amazon': (ProviderType.AMAZON, lambda: settings.get_amazon_access_key()),
             'cohere': (ProviderType.COHERE, settings.get_cohere_api_key),
             'deepseek': (ProviderType.DEEPSEEK, settings.get_deepseek_api_key),
