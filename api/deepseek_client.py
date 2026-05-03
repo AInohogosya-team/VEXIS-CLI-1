@@ -35,17 +35,20 @@ class DeepSeekLLMClient(BaseLLM):
         response = client.generate("Explain quantum computing")
         print(response.content)
     
-    Latest Models (as of 2025):
-        - deepseek-chat: DeepSeek V3.2 - General purpose chat
-        - deepseek-reasoner: DeepSeek R1 - Advanced reasoning model
+    Latest Models (as of 2026):
+        - deepseek-v4-pro: New DeepSeek V4 Pro - 1.6T params (49B active), 1M context (April 2026)
+        - deepseek-v4-flash: New DeepSeek V4 Flash - 284B params (13B active), 1M context (April 2026)
+        - deepseek-chat: Deprecated alias for v4-flash (non-thinking mode)
+        - deepseek-reasoner: Deprecated alias for v4-flash (thinking mode)
     """
 
-    DEFAULT_MODEL = "deepseek-chat"
+    DEFAULT_MODEL = "deepseek-v4-pro"
     
     MODEL_CONTEXT_WINDOWS = {
-        "deepseek-chat": 131_072,
-        "deepseek-reasoner": 131_072,
-        "deepseek-coder": 131_072,
+        "deepseek-v4-pro": 1_000_000,
+        "deepseek-v4-flash": 1_000_000,
+        "deepseek-chat": 1_000_000,
+        "deepseek-reasoner": 1_000_000,
     }
     
     VISION_MODELS = set()
@@ -202,31 +205,40 @@ class DeepSeekLLMClient(BaseLLM):
     def list_models(self) -> List[ModelInfo]:
         return [
             ModelInfo(
+                id="deepseek-v4-pro",
+                name="DeepSeek V4 Pro",
+                provider="deepseek",
+                context_window=1_000_000,
+                max_output_tokens=8_192,
+                supports_vision=False,
+                description="New V4 Pro: 1.6T params (49B active), 1M context, hybrid thinking (April 2026)"
+            ),
+            ModelInfo(
+                id="deepseek-v4-flash",
+                name="DeepSeek V4 Flash",
+                provider="deepseek",
+                context_window=1_000_000,
+                max_output_tokens=8_192,
+                supports_vision=False,
+                description="New V4 Flash: 284B params (13B active), 1M context, fast & efficient (April 2026)"
+            ),
+            ModelInfo(
                 id="deepseek-chat",
-                name="DeepSeek V3.2",
+                name="DeepSeek Chat (Deprecated)",
                 provider="deepseek",
                 context_window=131_072,
                 max_output_tokens=8_192,
                 supports_vision=False,
-                description="General purpose chat model"
+                description="Alias for v4-flash non-thinking mode (deprecated 2026/07/24)"
             ),
             ModelInfo(
                 id="deepseek-reasoner",
-                name="DeepSeek R1",
+                name="DeepSeek Reasoner (Deprecated)",
                 provider="deepseek",
                 context_window=131_072,
                 max_output_tokens=8_192,
                 supports_vision=False,
-                description="Advanced reasoning model"
-            ),
-            ModelInfo(
-                id="deepseek-coder",
-                name="DeepSeek Coder",
-                provider="deepseek",
-                context_window=131_072,
-                max_output_tokens=8_192,
-                supports_vision=False,
-                description="Code generation model"
+                description="Alias for v4-flash thinking mode (deprecated 2026/07/24)"
             ),
         ]
 

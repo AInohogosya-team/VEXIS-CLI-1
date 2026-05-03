@@ -42,22 +42,24 @@ class AmazonLLMClient(BaseLLM):
         response = client.generate("Explain quantum computing")
         print(response.content)
     
-    Latest Models (as of 2025):
-        - amazon.titan-text-premium-v1: Titan Text Premium
-        - amazon.titan-text-express-v1: Titan Text Express
-        - amazon.nova-pro-v1: Nova Pro
-        - amazon.nova-lite-v1: Nova Lite
-        - amazon.nova-micro-v1: Nova Micro
+    Latest Models (as of 2026):
+        - amazon.nova-pro-v1: New Nova Pro - Multimodal with 300K context (April 2025)
+        - amazon.nova-lite-v1: New Nova Lite - Cost-effective multimodal (April 2025)
+        - amazon.nova-micro-v1: New Nova Micro - Lightweight text model (April 2025)
+        
+        Legacy models (older generation, still available):
+        - amazon.titan-text-premium-v1: Titan Text Premium - Legacy model
+        - amazon.titan-text-express-v1: Titan Text Express - Legacy model
     """
 
-    DEFAULT_MODEL = "amazon.titan-text-premium-v1"
+    DEFAULT_MODEL = "amazon.nova-pro-v1"
     
     MODEL_CONTEXT_WINDOWS = {
-        "amazon.titan-text-premium-v1": 8_192,
-        "amazon.titan-text-express-v1": 8_192,
         "amazon.nova-pro-v1": 300_000,
         "amazon.nova-lite-v1": 300_000,
         "amazon.nova-micro-v1": 300_000,
+        "amazon.titan-text-premium-v1": 8_192,
+        "amazon.titan-text-express-v1": 8_192,
     }
     
     VISION_MODELS = {"amazon.nova-pro-v1", "amazon.nova-lite-v1"}
@@ -216,31 +218,13 @@ class AmazonLLMClient(BaseLLM):
     def list_models(self) -> List[ModelInfo]:
         return [
             ModelInfo(
-                id="amazon.titan-text-premium-v1",
-                name="Amazon Titan Text Premium",
-                provider="amazon",
-                context_window=8_192,
-                max_output_tokens=4_096,
-                supports_vision=False,
-                description="Premium text generation model"
-            ),
-            ModelInfo(
-                id="amazon.titan-text-express-v1",
-                name="Amazon Titan Text Express",
-                provider="amazon",
-                context_window=8_192,
-                max_output_tokens=4_096,
-                supports_vision=False,
-                description="Fast text generation model"
-            ),
-            ModelInfo(
                 id="amazon.nova-pro-v1",
                 name="Amazon Nova Pro",
                 provider="amazon",
                 context_window=300_000,
                 max_output_tokens=32_768,
                 supports_vision=True,
-                description="Multimodal model with 300K context"
+                description="New multimodal model with 300K context (April 2025)"
             ),
             ModelInfo(
                 id="amazon.nova-lite-v1",
@@ -249,7 +233,7 @@ class AmazonLLMClient(BaseLLM):
                 context_window=300_000,
                 max_output_tokens=32_768,
                 supports_vision=True,
-                description="Cost-effective multimodal model"
+                description="New cost-effective multimodal model (April 2025)"
             ),
             ModelInfo(
                 id="amazon.nova-micro-v1",
@@ -258,7 +242,26 @@ class AmazonLLMClient(BaseLLM):
                 context_window=300_000,
                 max_output_tokens=32_768,
                 supports_vision=False,
-                description="Lightweight text model"
+                description="New lightweight text model (April 2025)"
+            ),
+            # Legacy models (older generation)
+            ModelInfo(
+                id="amazon.titan-text-premium-v1",
+                name="Amazon Titan Text Premium (Legacy)",
+                provider="amazon",
+                context_window=8_192,
+                max_output_tokens=4_096,
+                supports_vision=False,
+                description="LEGACY: Older generation text model - use Nova instead"
+            ),
+            ModelInfo(
+                id="amazon.titan-text-express-v1",
+                name="Amazon Titan Text Express (Legacy)",
+                provider="amazon",
+                context_window=8_192,
+                max_output_tokens=4_096,
+                supports_vision=False,
+                description="LEGACY: Older generation text model - use Nova instead"
             ),
         ]
 

@@ -44,22 +44,23 @@ class XAILLMClient(BaseLLM):
         response = client.generate("Explain quantum computing")
         print(response.content)
     
-    Latest Models (as of 2025):
-        - grok-4-2025-11-04: Grok 4 - Latest flagship with advanced reasoning
-        - grok-4-mini: Grok 4 Mini - Efficient version
-        - grok-3-mini: Grok 3 Mini - Fast, cost-effective
-        - grok-2: Grok 2 - Previous generation
+    Latest Models (as of 2026):
+        - grok-4.3: New most intelligent model with 1M context, native video (April 2026)
+        - grok-4: Grok 4 - Advanced reasoning with 131K context
+        - grok-4-fast: Grok 4 Fast - Low latency with 131K context
+        - grok-4-thinking: Grok 4 Thinking - Extended reasoning with 131K context
     """
 
-    DEFAULT_MODEL = "grok-4.1"
+    DEFAULT_MODEL = "grok-4.3"
 
     MODEL_CONTEXT_WINDOWS = {
-        "grok-4.1": 131_072,
-        "grok-4.1-fast": 131_072,
-        "grok-4.1-thinking": 131_072,
+        "grok-4.3": 1_000_000,
+        "grok-4": 131_072,
+        "grok-4-fast": 131_072,
+        "grok-4-thinking": 131_072,
     }
 
-    VISION_MODELS = {"grok-4.1", "grok-4.1-fast"}
+    VISION_MODELS = {"grok-4.3", "grok-4", "grok-4-fast"}
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         self._api_key = api_key or os.getenv("XAI_API_KEY")

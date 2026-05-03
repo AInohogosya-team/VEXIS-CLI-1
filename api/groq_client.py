@@ -36,20 +36,30 @@ class GroqLLMClient(BaseLLM):
         print(response.content)
     
     Latest Models (as of 2026):
-        - llama-3.3-70b-versatile: Llama 3.3 70B - High performance
-        - openai/gpt-oss-120b: OpenAI GPT-OSS 120B - Open source powerhouse
-        - llama-3.1-70b-instruct: Llama 3.1 70B - Strong reasoning
+        - openai/gpt-oss-120b: OpenAI GPT-OSS 120B - Open source powerhouse (New, April 2026)
+        - qwen/qwen3-32b: New Qwen3 32B - Preview model
+        - meta-llama/llama-4-scout-17b-16e-instruct: Llama 4 Scout - Preview model
+        - llama-3.3-70b-versatile: Llama 3.3 70B - Production high performance
         - llama-3.1-8b-instant: Llama 3.1 8B - Fast, efficient
+        - openai/gpt-oss-20b: OpenAI GPT-OSS 20B - Efficient open source
+        
+        Deprecated models (still available but will be shut down):
+        - meta-llama/llama-4-maverick-17b-128e-instruct: Deprecated March 2026
+        - moonshotai/kimi-k2-instruct-0905: Deprecated April 2026
+        - gemma2-9b-it: Deprecated October 2025
     """
 
-    DEFAULT_MODEL = "llama-3.3-70b-versatile"
+    DEFAULT_MODEL = "openai/gpt-oss-120b"
     
     MODEL_CONTEXT_WINDOWS = {
-        "llama-3.3-70b-versatile": 128_000,
         "openai/gpt-oss-120b": 128_000,
-        "llama-3.1-70b-instruct": 128_000,
-        "llama-3.1-8b-instruct": 128_000,
+        "openai/gpt-oss-20b": 128_000,
+        "qwen/qwen3-32b": 128_000,
+        "meta-llama/llama-4-scout-17b-16e-instruct": 128_000,
+        "llama-3.3-70b-versatile": 128_000,
         "llama-3.1-8b-instant": 128_000,
+        "meta-llama/llama-4-maverick-17b-128e-instruct": 128_000,
+        "moonshotai/kimi-k2-instruct-0905": 256_000,
         "gemma2-9b-it": 8_192,
     }
     
@@ -207,22 +217,46 @@ class GroqLLMClient(BaseLLM):
     def list_models(self) -> List[ModelInfo]:
         return [
             ModelInfo(
+                id="openai/gpt-oss-120b",
+                name="GPT-OSS 120B",
+                provider="groq",
+                context_window=128_000,
+                max_output_tokens=32_768,
+                supports_vision=False,
+                supports_streaming=True,
+                description="New OpenAI open source 120B parameter model (April 2026)",
+                capabilities=["streaming", "function_calling"]
+            ),
+            ModelInfo(
+                id="qwen/qwen3-32b",
+                name="Qwen3 32B",
+                provider="groq",
+                context_window=128_000,
+                max_output_tokens=32_768,
+                supports_vision=False,
+                supports_streaming=True,
+                description="New Qwen3 32B model (Preview)",
+                capabilities=["streaming"]
+            ),
+            ModelInfo(
+                id="meta-llama/llama-4-scout-17b-16e-instruct",
+                name="Llama 4 Scout 17B",
+                provider="groq",
+                context_window=128_000,
+                max_output_tokens=32_768,
+                supports_vision=False,
+                supports_streaming=True,
+                description="Llama 4 Scout Preview with advanced reasoning",
+                capabilities=["streaming"]
+            ),
+            ModelInfo(
                 id="llama-3.3-70b-versatile",
                 name="Llama 3.3 70B Versatile",
                 provider="groq",
                 context_window=128_000,
                 max_output_tokens=32_768,
                 supports_vision=False,
-                description="High performance with 128K context"
-            ),
-            ModelInfo(
-                id="llama-3.1-70b-instruct",
-                name="Llama 3.1 70B Instruct",
-                provider="groq",
-                context_window=128_000,
-                max_output_tokens=32_768,
-                supports_vision=False,
-                description="Strong reasoning capabilities"
+                description="Production high performance with 128K context"
             ),
             ModelInfo(
                 id="llama-3.1-8b-instant",
@@ -234,15 +268,43 @@ class GroqLLMClient(BaseLLM):
                 description="Fast, efficient for simple tasks"
             ),
             ModelInfo(
-                id="openai/gpt-oss-120b",
-                name="GPT-OSS 120B",
+                id="openai/gpt-oss-20b",
+                name="GPT-OSS 20B",
                 provider="groq",
                 context_window=128_000,
                 max_output_tokens=32_768,
                 supports_vision=False,
                 supports_streaming=True,
-                description="OpenAI's open source 120B parameter model",
+                description="OpenAI efficient open source 20B parameter model",
                 capabilities=["streaming", "function_calling"]
+            ),
+            # Deprecated models (kept for backward compatibility)
+            ModelInfo(
+                id="meta-llama/llama-4-maverick-17b-128e-instruct",
+                name="Llama 4 Maverick 17B (Deprecated)",
+                provider="groq",
+                context_window=128_000,
+                max_output_tokens=32_768,
+                supports_vision=False,
+                description="DEPRECATED: Use openai/gpt-oss-120b instead (shut down March 2026)"
+            ),
+            ModelInfo(
+                id="moonshotai/kimi-k2-instruct-0905",
+                name="Kimi K2 0905 (Deprecated)",
+                provider="groq",
+                context_window=256_000,
+                max_output_tokens=32_768,
+                supports_vision=False,
+                description="DEPRECATED: Use openai/gpt-oss-120b instead (shut down April 2026)"
+            ),
+            ModelInfo(
+                id="gemma2-9b-it",
+                name="Gemma 2 9B (Deprecated)",
+                provider="groq",
+                context_window=8_192,
+                max_output_tokens=8_192,
+                supports_vision=False,
+                description="DEPRECATED: Use llama-3.1-8b-instant instead (shut down October 2025)"
             ),
         ]
 

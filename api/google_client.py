@@ -62,28 +62,35 @@ class GoogleLLMClient(BaseLLM):
         response = client.generate("Explain quantum computing", config=config)
     
     Latest Models (as of 2026):
-        - gemini-3.1-pro: Advanced reasoning and coding • Latest flagship
-        - gemini-3-flash: Fast and efficient • Latest stable release
-        - gemini-2.5-flash: Previous generation • Still supported
-        - gemini-1.5-pro: Legacy model • Phased out
+        - gemini-2.5-pro: Stable 1M context, advanced reasoning and coding
+        - gemini-2.5-flash: Stable 1M context, fast and efficient
+        - gemini-2.5-flash-lite: Stable 1M context, lightweight
+        - gemini-3.1-pro-preview: New Preview 2M context flagship (April 2026)
+        - gemini-3-flash-preview: New Preview fast frontier-class (April 2026)
+        - gemini-3.1-flash-lite-preview: New Preview lightweight (April 2026)
+        - deep-research-preview-04-2026: New Deep Research agent (April 2026)
+        - deep-research-max-preview-04-2026: New Deep Research Max agent (April 2026)
     """
 
     # Default model to use
-    DEFAULT_MODEL = "gemini-3.1-pro-preview"
+    DEFAULT_MODEL = "gemini-2.5-pro"
     
     # Model context windows
     MODEL_CONTEXT_WINDOWS = {
+        "gemini-2.5-pro": 1_048_576,
+        "gemini-2.5-flash": 1_048_576,
+        "gemini-2.5-flash-lite": 1_048_576,
         "gemini-3.1-pro-preview": 2_097_152,
         "gemini-3-flash-preview": 1_048_576,
         "gemini-3.1-flash-lite-preview": 1_048_576,
-        "gemini-2.5-pro": 1_048_576,
-        "gemini-2.5-flash": 1_048_576,
+        "deep-research-preview-04-2026": 1_048_576,
+        "deep-research-max-preview-04-2026": 1_048_576,
     }
     
     # Vision-capable models
     VISION_MODELS = {
+        "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite",
         "gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-3.1-flash-lite-preview",
-        "gemini-2.5-pro", "gemini-2.5-flash",
     }
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):

@@ -35,20 +35,18 @@ class CohereLLMClient(BaseLLM):
         response = client.generate("Explain quantum computing")
         print(response.content)
     
-    Latest Models (as of 2025):
-        - command-a-03-2025: Command A - Most performant enterprise model
-        - command-r-08-2024: Command R - Strong reasoning model
-        - command-r-plus-08-2024: Command R+ - Enhanced reasoning
-        - command-7b-2024-08: Command - Fast, lightweight
+    Latest Models (as of 2026):
+        - command-a-03-2025: Command A - Most performant enterprise model (March 2025)
+        - command-r-08-2024: Command R - Strong reasoning model (August 2024)
+        - command-r-plus-08-2024: Command R+ - Enhanced reasoning (August 2024)
     """
 
     DEFAULT_MODEL = "command-a-03-2025"
     
     MODEL_CONTEXT_WINDOWS = {
-        "command-a-03-2025": 128_000,
+        "command-a-03-2025": 256_000,
         "command-r-08-2024": 128_000,
         "command-r-plus-08-2024": 128_000,
-        "command-7b-2024-08": 4_096,
     }
     
     VISION_MODELS = set()
@@ -191,10 +189,10 @@ class CohereLLMClient(BaseLLM):
                 id="command-a-03-2025",
                 name="Command A",
                 provider="cohere",
-                context_window=128_000,
+                context_window=256_000,
                 max_output_tokens=4_096,
                 supports_vision=False,
-                description="Most performant enterprise model"
+                description="Most performant enterprise model (March 2025)"
             ),
             ModelInfo(
                 id="command-r-08-2024",
@@ -203,7 +201,7 @@ class CohereLLMClient(BaseLLM):
                 context_window=128_000,
                 max_output_tokens=4_096,
                 supports_vision=False,
-                description="Strong reasoning model"
+                description="Strong reasoning model (August 2024)"
             ),
             ModelInfo(
                 id="command-r-plus-08-2024",
@@ -212,16 +210,7 @@ class CohereLLMClient(BaseLLM):
                 context_window=128_000,
                 max_output_tokens=4_096,
                 supports_vision=False,
-                description="Enhanced reasoning model"
-            ),
-            ModelInfo(
-                id="command-7b-2024-08",
-                name="Command",
-                provider="cohere",
-                context_window=4_096,
-                max_output_tokens=4_096,
-                supports_vision=False,
-                description="Fast, lightweight model"
+                description="Enhanced reasoning model (August 2024)"
             ),
         ]
 

@@ -44,24 +44,27 @@ class AnthropicLLMClient(BaseLLM):
         response = client.generate("Explain quantum computing")
         print(response.content)
     
-    Latest Models (as of 2025):
-        - claude-opus-4-6-20251120: Claude Opus 4.6 - Most capable for complex tasks
-        - claude-sonnet-4-6-20251120: Claude Sonnet 4.6 - Balanced performance
-        - claude-haiku-4-2025-01-15: Claude Haiku 4 - Fast, efficient
+    Latest Models (as of 2026):
+        - claude-opus-4-7: New most capable model for complex tasks (April 2026)
+        - claude-opus-4-6: Claude Opus 4.6 - Advanced reasoning
+        - claude-sonnet-4-6: Claude Sonnet 4.6 - Balanced performance
+        - claude-sonnet-4-5: Claude Sonnet 4.5 - Efficient model (1M context)
+        - claude-haiku-4-5: Claude Haiku 4.5 - Fast, cost-efficient with extended thinking (Oct 2025)
     """
 
-    DEFAULT_MODEL = "claude-opus-4-6-20260219"
+    DEFAULT_MODEL = "claude-opus-4-7"
 
     MODEL_CONTEXT_WINDOWS = {
-        "claude-opus-4-6-20260219": 200_000,
-        "claude-sonnet-4-6-20260219": 200_000,
-        "claude-opus-4-5-20251125": 200_000,
-        "claude-sonnet-4-5-20251125": 200_000,
+        "claude-opus-4-7": 200_000,
+        "claude-opus-4-6": 200_000,
+        "claude-sonnet-4-6": 200_000,
+        "claude-sonnet-4-5": 1_000_000,
+        "claude-haiku-4-5": 200_000,
     }
 
     VISION_MODELS = {
-        "claude-opus-4-6-20260219", "claude-sonnet-4-6-20260219",
-        "claude-opus-4-5-20251125", "claude-sonnet-4-5-20251125",
+        "claude-opus-4-7", "claude-opus-4-6",
+        "claude-sonnet-4-6", "claude-sonnet-4-5", "claude-haiku-4-5",
     }
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):

@@ -57,7 +57,7 @@ class MiniMaxLLMClient(BaseLLM):
         )
         response = client.generate("Explain AI", config=config)
     
-    Latest Models (as of 2025):
+    Latest Models (as of 2026):
         - minimax-m2.7: Latest M2.7 model with agent teams and complex skills
         - minimax-m2.5: State-of-the-art productivity and coding model
         - minimax-m2: High efficiency coding and agentic model

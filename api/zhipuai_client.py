@@ -58,6 +58,7 @@ class ZhipuAILLMClient(BaseLLM):
         response = client.generate("Explain AI", config=config)
     
     Latest Models (as of 2026):
+        - glm-5.1: New latest flagship model for long-horizon agentic tasks (April 2026)
         - glm-5: 744B total parameters (40B active) - Frontier model with strong reasoning
         - glm-5-turbo: Efficient variant for tool invocation and agent tasks
         - glm-4.7: Advanced coding capabilities model
@@ -87,7 +88,7 @@ class ZhipuAILLMClient(BaseLLM):
     @property
     def default_model(self) -> str:
         """Return the default model for ZhipuAI"""
-        return "glm-5"
+        return "glm-5.1"
     
     def _initialize_client(self) -> None:
         """Initialize the OpenAI-compatible client for ZhipuAI"""
@@ -110,6 +111,17 @@ class ZhipuAILLMClient(BaseLLM):
         
         # Model information mapping based on official Z.AI documentation
         model_info_map = {
+            "glm-5.1": ModelInfo(
+                id="glm-5.1",
+                name="GLM-5.1",
+                provider="zhipuai",
+                context_window=200000,
+                max_output_tokens=8192,
+                supports_vision=False,
+                supports_streaming=True,
+                description="New flagship model for long-horizon agentic tasks (April 2026)",
+                capabilities=["text-generation", "coding", "reasoning", "agentic", "long-horizon"]
+            ),
             "glm-5": ModelInfo(
                 id="glm-5",
                 name="GLM-5",
@@ -118,7 +130,7 @@ class ZhipuAILLMClient(BaseLLM):
                 max_output_tokens=8192,
                 supports_vision=False,
                 supports_streaming=True,
-                description="744B total parameters (40B active) - Frontier model with strong reasoning and agentic capabilities",
+                description="744B total parameters (40B active) - Frontier model with strong reasoning",
                 capabilities=["text-generation", "coding", "reasoning", "agentic"]
             ),
             "glm-5-turbo": ModelInfo(
@@ -473,6 +485,7 @@ class ZhipuAILLMClient(BaseLLM):
     def list_models(self) -> List[ModelInfo]:
         """List available ZhipuAI models."""
         return [
+            self.get_model_info("glm-5.1"),
             self.get_model_info("glm-5"),
             self.get_model_info("glm-5-turbo"),
             self.get_model_info("glm-4.7"),

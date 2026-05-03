@@ -47,22 +47,34 @@ class OpenAILLMClient(BaseLLM):
         response = client.generate("Explain quantum computing", config=config)
     
     Latest Models (as of 2026):
+        - gpt-5.5: New flagship model with advanced reasoning (April 2026)
+        - gpt-5.5-pro: New version with smarter, more precise responses (April 2026)
         - gpt-5.4: Multimodal flagship model
-        - gpt-5.4-pro: Professional tier
-        - gpt-5.4-mini: Cost-optimized
-        - gpt-5.4-nano: Ultra-lightweight
-        - o3/o3-mini: Advanced reasoning models
+        - gpt-5.4-mini: Cost-optimized mini model
+        - gpt-5.4-nano: Ultra-lightweight nano model
+        - gpt-5: Previous intelligent reasoning model
+        - gpt-5-mini: Near-frontier intelligence for cost-sensitive workloads
+        - gpt-5-nano: Fastest, most cost-efficient version
+        
+        Reasoning models (released April 2025):
+        - o3: Most powerful reasoning model
+        - o4-mini: Cost-efficient reasoning model
+        - o3-mini: Lightweight reasoning model
     """
 
     # Default model to use
-    DEFAULT_MODEL = "gpt-5.4"
+    DEFAULT_MODEL = "gpt-5.5"
 
     # Model context windows (approximate)
     MODEL_CONTEXT_WINDOWS = {
+        "gpt-5.5": 1_048_576,
+        "gpt-5.5-pro": 1_048_576,
         "gpt-5.4": 1_048_576,
         "gpt-5.4-mini": 1_048_576,
         "gpt-5.4-nano": 1_048_576,
-        "gpt-5.4-pro": 1_048_576,
+        "gpt-5": 1_048_576,
+        "gpt-5-mini": 1_048_576,
+        "gpt-5-nano": 1_048_576,
         "o3": 200_000,
         "o4-mini": 200_000,
         "o3-mini": 200_000,
@@ -70,10 +82,14 @@ class OpenAILLMClient(BaseLLM):
 
     # Max output tokens per model
     MODEL_MAX_TOKENS = {
+        "gpt-5.5": 32_768,
+        "gpt-5.5-pro": 32_768,
         "gpt-5.4": 32_768,
         "gpt-5.4-mini": 16_384,
         "gpt-5.4-nano": 8_192,
-        "gpt-5.4-pro": 32_768,
+        "gpt-5": 16_384,
+        "gpt-5-mini": 16_384,
+        "gpt-5-nano": 8_192,
         "o3": 32_768,
         "o4-mini": 16_384,
         "o3-mini": 16_384,
@@ -81,10 +97,12 @@ class OpenAILLMClient(BaseLLM):
 
     # Vision-capable models
     VISION_MODELS = {
-        "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.4-pro",
+        "gpt-5.5", "gpt-5.5-pro", "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano",
+        "gpt-5", "gpt-5-mini", "gpt-5-nano",
     }
 
     # Reasoning models (use different parameter handling)
+    # Note: These were released April 2025, not April 2026
     REASONING_MODELS = {"o3", "o3-mini", "o4-mini"}
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
@@ -523,10 +541,10 @@ class OpenAILLMClient(BaseLLM):
             
             # Map model to encoding
             encoding_map = {
+                "gpt-5.5": "o200k_base",
                 "gpt-5.4": "o200k_base",
-                "gpt-5.4-pro": "o200k_base",
-                "gpt-5-mini": "o200k_base",
-                "gpt-5-nano": "o200k_base",
+                "gpt-5.4-mini": "o200k_base",
+                "gpt-5.4-nano": "o200k_base",
                 "gpt-5": "o200k_base",
                 "gpt-4.1": "o200k_base",
                 "gpt-5-codex": "o200k_base",

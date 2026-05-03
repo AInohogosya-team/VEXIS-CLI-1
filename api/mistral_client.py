@@ -35,26 +35,29 @@ class MistralLLMClient(BaseLLM):
         response = client.generate("Explain quantum computing")
         print(response.content)
     
-    Latest Models (as of 2025):
-        - mistral-large-3: Latest flagship with strong reasoning
-        - mistral-small-3.1: Efficient model for simple tasks
+    Latest Models (as of 2026):
+        - mistral-medium-3.5: New 128B dense model - unified chat, reasoning, code (May 2026)
+        - mistral-large-3: Flagship MoE model with 675B total params, 41B active, 256K context
+        - mistral-small-4: Enterprise-ready compact multimodal model
+        - ministral-3b/8b/14b: Edge device models
         - codestral-2501: Code generation model
-        - pixtral-large-2411: Vision model
+        - pixtral-large-2411: Vision model with 1M context
     """
 
-    DEFAULT_MODEL = "mistral-large-3"
+    DEFAULT_MODEL = "mistral-medium-3.5"
     
     MODEL_CONTEXT_WINDOWS = {
-        "mistral-large-3": 1_048_576,
-        "mistral-small-3.1": 128_000,
-        "mistral-small-3": 128_000,
+        "mistral-medium-3.5": 256_000,
+        "mistral-large-3": 256_000,
+        "mistral-small-4": 128_000,
+        "ministral-3b": 128_000,
+        "ministral-8b": 128_000,
+        "ministral-14b": 128_000,
         "codestral-2501": 256_000,
-        "codestral-2405": 32_768,
         "pixtral-large-2411": 1_048_576,
-        "pixtral-12b-2409": 1_048_576,
     }
     
-    VISION_MODELS = {"pixtral-large-2411", "pixtral-12b-2409"}
+    VISION_MODELS = {"mistral-small-4", "pixtral-large-2411"}
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         self._api_key = api_key or os.getenv("MISTRAL_API_KEY")
@@ -203,22 +206,40 @@ class MistralLLMClient(BaseLLM):
     def list_models(self) -> List[ModelInfo]:
         return [
             ModelInfo(
+                id="mistral-medium-3.5",
+                name="Mistral Medium 3.5",
+                provider="mistral",
+                context_window=256_000,
+                max_output_tokens=32_768,
+                supports_vision=False,
+                description="New 128B dense model - unified chat, reasoning, code (May 2026)"
+            ),
+            ModelInfo(
                 id="mistral-large-3",
                 name="Mistral Large 3",
                 provider="mistral",
-                context_window=1_048_576,
+                context_window=256_000,
                 max_output_tokens=32_768,
                 supports_vision=False,
-                description="Latest flagship with strong reasoning"
+                description="Flagship MoE with 675B total params, 41B active, 256K context"
             ),
             ModelInfo(
-                id="mistral-small-3.1",
-                name="Mistral Small 3.1",
+                id="mistral-small-4",
+                name="Mistral Small 4",
+                provider="mistral",
+                context_window=128_000,
+                max_output_tokens=32_768,
+                supports_vision=True,
+                description="Enterprise-ready compact multimodal model"
+            ),
+            ModelInfo(
+                id="ministral-8b",
+                name="Ministral 8B",
                 provider="mistral",
                 context_window=128_000,
                 max_output_tokens=32_768,
                 supports_vision=False,
-                description="Efficient model for simple tasks"
+                description="Edge-optimized 8B parameter model"
             ),
             ModelInfo(
                 id="codestral-2501",

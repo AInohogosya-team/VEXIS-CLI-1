@@ -38,13 +38,10 @@ class MetaLLMClient(BaseLLM):
         response = client.generate("Explain quantum computing")
         print(response.content)
     
-    Latest Models (as of 2025):
-        - llama-4-scout-17b-16e-instruct: Llama 4 Scout - Efficient, 16 experts
-        - llama-4-maverick-17b-128e-instruct: Llama 4 Maverick - Powerful, 128 experts
-        - llama-3.3-70b-instruct: Llama 3.3 70B - Strong performance
-        - llama-3.1-405b-instruct: Llama 3.1 405B - Large model
-        - llama-3.1-70b-instruct: Llama 3.1 70B - Balanced
-        - llama-3.1-8b-instruct: Llama 3.1 8B - Lightweight
+    Latest Models (as of 2026):
+        - llama-4-scout-17b-16e-instruct: New Llama 4 Scout - 10M context, multimodal (April 2025)
+        - llama-4-maverick-17b-128e-instruct: New Llama 4 Maverick - 1M context, 128 experts (April 2025)
+        - llama-3.3-70b-instruct: Llama 3.3 70B - Text only, strong performance
     """
 
     DEFAULT_MODEL = "llama-4-scout-17b-16e-instruct"
@@ -52,6 +49,10 @@ class MetaLLMClient(BaseLLM):
     MODEL_CONTEXT_WINDOWS = {
         "llama-4-scout-17b-16e-instruct": 10_000_000,
         "llama-4-maverick-17b-128e-instruct": 1_000_000,
+        "llama-3.3-70b-instruct": 128_000,
+        "llama-3.1-405b-instruct": 128_000,
+        "llama-3.1-70b-instruct": 128_000,
+        "llama-3.1-8b-instruct": 128_000,
     }
 
     VISION_MODELS = {"llama-4-scout-17b-16e-instruct", "llama-4-maverick-17b-128e-instruct"}

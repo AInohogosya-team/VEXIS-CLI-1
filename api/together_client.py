@@ -35,26 +35,26 @@ class TogetherLLMClient(BaseLLM):
         response = client.generate("Explain quantum computing")
         print(response.content)
     
-    Latest Models (as of 2025):
+    Latest Models (as of 2026):
+        - meta-llama/Llama-4-Scout-17B-Instruct: New Llama 4 Scout (April 2025)
+        - meta-llama/Llama-4-Maverick-17B-Instruct: New Llama 4 Maverick (April 2025)
+        - MiniMax/MiniMax-M2.7: New MiniMax M2.7 with agent teams (April 2026)
+        - moonshotai/Kimi-K2.6: New Kimi K2.6 with 256K context
+        - deepseek-ai/DeepSeek-V4-Pro: New DeepSeek V4 Pro with 1M context (April 2026)
+        - Qwen/Qwen3.5-397B-A17B: New Qwen 3.5 397B A17B
         - Meta-Llama-3.3-70B-Instruct: Llama 3.3 70B
-        - Meta-Llama-3.1-405B-Instruct: Llama 3.1 405B
-        - Qwen/Qwen2.5-72B-Instruct: Qwen 2.5 72B
-        - mistralai/Mistral-7B-Instruct-v0.3: Mistral 7B
-        - deepseek-ai/DeepSeek-V3: DeepSeek V3
     """
 
     DEFAULT_MODEL = "meta-llama/Llama-4-Scout-17B-Instruct"
     
     MODEL_CONTEXT_WINDOWS = {
         "meta-llama/Llama-4-Scout-17B-Instruct": 128_000,
+        "meta-llama/Llama-4-Maverick-17B-Instruct": 128_000,
+        "MiniMax/MiniMax-M2.7": 200_000,
+        "moonshotai/Kimi-K2.6": 256_000,
+        "deepseek-ai/DeepSeek-V4-Pro": 1_000_000,
+        "Qwen/Qwen3.5-397B-A17B": 128_000,
         "Meta-Llama-3.3-70B-Instruct": 128_000,
-        "Meta-Llama-3.1-405B-Instruct": 128_000,
-        "Meta-Llama-3.1-70B-Instruct": 128_000,
-        "Meta-Llama-3.1-8B-Instruct": 128_000,
-        "Qwen/Qwen2.5-72B-Instruct": 32_768,
-        "Qwen/Qwen2.5-14B-Instruct": 32_768,
-        "mistralai/Mistral-7B-Instruct-v0.3": 32_768,
-        "deepseek-ai/DeepSeek-V3": 131_072,
     }
     
     VISION_MODELS = set()
@@ -217,7 +217,52 @@ class TogetherLLMClient(BaseLLM):
                 context_window=128_000,
                 max_output_tokens=32_768,
                 supports_vision=False,
-                description="Latest Llama 4 model with advanced reasoning"
+                description="New Llama 4 Scout with 10M context (April 2025)"
+            ),
+            ModelInfo(
+                id="meta-llama/Llama-4-Maverick-17B-Instruct",
+                name="Llama 4 Maverick 17B",
+                provider="together",
+                context_window=128_000,
+                max_output_tokens=32_768,
+                supports_vision=False,
+                description="New Llama 4 Maverick with 128 experts (April 2025)"
+            ),
+            ModelInfo(
+                id="MiniMax/MiniMax-M2.7",
+                name="MiniMax M2.7",
+                provider="together",
+                context_window=200_000,
+                max_output_tokens=32_768,
+                supports_vision=False,
+                description="New MiniMax M2.7 with agent teams (April 2026)"
+            ),
+            ModelInfo(
+                id="moonshotai/Kimi-K2.6",
+                name="Kimi K2.6",
+                provider="together",
+                context_window=256_000,
+                max_output_tokens=32_768,
+                supports_vision=False,
+                description="New Moonshot Kimi K2.6 with 256K context"
+            ),
+            ModelInfo(
+                id="deepseek-ai/DeepSeek-V4-Pro",
+                name="DeepSeek V4 Pro",
+                provider="together",
+                context_window=1_000_000,
+                max_output_tokens=8_192,
+                supports_vision=False,
+                description="New DeepSeek V4 Pro with 1M context (April 2026)"
+            ),
+            ModelInfo(
+                id="Qwen/Qwen3.5-397B-A17B",
+                name="Qwen 3.5 397B A17B",
+                provider="together",
+                context_window=128_000,
+                max_output_tokens=32_768,
+                supports_vision=False,
+                description="New Qwen 3.5 flagship model"
             ),
             ModelInfo(
                 id="Meta-Llama-3.3-70B-Instruct",
@@ -227,42 +272,6 @@ class TogetherLLMClient(BaseLLM):
                 max_output_tokens=32_768,
                 supports_vision=False,
                 description="High performance open model"
-            ),
-            ModelInfo(
-                id="Meta-Llama-3.1-405B-Instruct",
-                name="Llama 3.1 405B",
-                provider="together",
-                context_window=128_000,
-                max_output_tokens=32_768,
-                supports_vision=False,
-                description="Large model for complex tasks"
-            ),
-            ModelInfo(
-                id="Meta-Llama-3.1-70B-Instruct",
-                name="Llama 3.1 70B",
-                provider="together",
-                context_window=128_000,
-                max_output_tokens=32_768,
-                supports_vision=False,
-                description="Balanced performance"
-            ),
-            ModelInfo(
-                id="Qwen/Qwen2.5-72B-Instruct",
-                name="Qwen 2.5 72B",
-                provider="together",
-                context_window=32_768,
-                max_output_tokens=8_192,
-                supports_vision=False,
-                description="Strong multilingual model"
-            ),
-            ModelInfo(
-                id="deepseek-ai/DeepSeek-V3",
-                name="DeepSeek V3",
-                provider="together",
-                context_window=131_072,
-                max_output_tokens=8_192,
-                supports_vision=False,
-                description="Advanced reasoning model"
             ),
         ]
 

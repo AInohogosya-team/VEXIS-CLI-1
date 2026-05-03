@@ -42,21 +42,24 @@ class MicrosoftLLMClient(BaseLLM):
         print(response.content)
     
     Latest Models (as of 2026):
-        - gpt-5.4: Latest flagship model
-        - gpt-5.4-pro: Professional tier
-        - gpt-5.4-mini: Cost-optimized
+        - gpt-5.5: New flagship model with advanced reasoning (April 2026)
+        - gpt-5.5-pro: New version with smarter, more precise responses (April 2026)
+        - gpt-5.4: Multimodal flagship model
+        - gpt-5.4-mini: Cost-optimized mini model
+        - gpt-5.4-nano: Ultra-lightweight nano model
     """
 
-    DEFAULT_MODEL = "gpt-5.4"
+    DEFAULT_MODEL = "gpt-5.5"
 
     MODEL_CONTEXT_WINDOWS = {
+        "gpt-5.5": 1_048_576,
+        "gpt-5.5-pro": 1_048_576,
         "gpt-5.4": 1_048_576,
         "gpt-5.4-mini": 1_048_576,
         "gpt-5.4-nano": 1_048_576,
-        "gpt-5.4-pro": 1_048_576,
     }
 
-    VISION_MODELS = {"gpt-5.4", "gpt-5.4-mini", "gpt-5.4-pro"}
+    VISION_MODELS = {"gpt-5.5", "gpt-5.5-pro", "gpt-5.4", "gpt-5.4-mini"}
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         self._api_key = api_key or os.getenv("AZURE_OPENAI_API_KEY")
