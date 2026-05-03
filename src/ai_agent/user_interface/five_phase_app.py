@@ -234,15 +234,15 @@ Examples:
     parser.add_argument(
         "--command-timeout",
         type=int,
-        default=30,
-        help="Timeout for individual commands in seconds (default: 30)"
+        default=600,
+        help="Timeout for individual commands in seconds (default: 600)"
     )
-    
+
     parser.add_argument(
         "--task-timeout",
         type=int,
-        default=300,
-        help="Timeout for tasks in seconds (default: 300)"
+        default=5400,
+        help="Timeout for tasks in seconds (default: 5400)"
     )
     
     # Testing options

@@ -140,10 +140,33 @@ class FivePhaseEngine:
                 return context
             
             # Phase 2-4 Loop: Extract, Execute, Evaluate until complete
+            task_start_time = time.time()
             while context.iteration_count < context.max_iterations:
                 context.iteration_count += 1
-                self.logger.info(f"Starting iteration {context.iteration_count}", 
+                self.logger.info(f"Starting iteration {context.iteration_count}",
                                phase=context.current_phase.value)
+
+                # Check task timeout
+                if self.task_timeout > 0:
+                    elapsed = time.time() - task_start_time
+                    if elapsed > self.task_timeout:
+                        error_msg = f"Task timeout after {elapsed:.1f} seconds (limit: {self.task_timeout}s)"
+                        self.logger.error(error_msg)
+                        context.current_phase = PipelinePhase.FAILED
+                        context.error = error_msg
+
+                        # Send timeout notification via Telegram
+                        if context.telegram_mode and self.telegram_bot and context.telegram_user_id:
+                            try:
+                                self._send_telegram_message_sync(
+                                    context.telegram_user_id,
+                                    f"⏱️ **Task Timeout**\n\nThe task exceeded the maximum execution time.\n\nElapsed: {elapsed:.1f}s\nLimit: {self.task_timeout}s"
+                                )
+                                self.logger.info("Sent timeout notification to Telegram")
+                            except Exception as telegram_error:
+                                self.logger.warning(f"Failed to send timeout notification to Telegram: {telegram_error}")
+
+                        return context
                 
                 # Phase 2: Command Extraction
                 if not self._run_phase2(context):

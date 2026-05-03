@@ -60,7 +60,7 @@ class SecurityConfig:
     sanitize_text_input: bool = True
     validate_file_paths: bool = True
     max_text_length: int = 1000
-    command_timeout: int = 30
+    command_timeout: int = 600
     
     # Command blocking settings (default: disabled for user freedom)
     enable_command_blocking: bool = False      # Block dangerous commands like 'rm -rf /'
@@ -74,8 +74,8 @@ class SecurityConfig:
 class PerformanceConfig:
     """Performance configuration"""
     max_concurrent_tasks: int = 1
-    task_timeout: int = 0  # No task timeout
-    command_timeout: int = 30
+    task_timeout: int = 5400
+    command_timeout: int = 600
     api_timeout: int = 30
     memory_limit_mb: int = 1024
 
@@ -91,8 +91,8 @@ class EngineConfig:
     screenshot_format: str = "PNG"
     max_task_retries: int = 3
     max_command_retries: int = 3
-    command_timeout: int = 30
-    task_timeout: int = 300
+    command_timeout: int = 600
+    task_timeout: int = 5400
     max_rebuilds_per_session: int = 3
 
 
