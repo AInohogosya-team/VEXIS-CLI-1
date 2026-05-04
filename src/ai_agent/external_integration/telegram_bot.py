@@ -445,7 +445,7 @@ class TelegramBotManager:
                 # Start bot
                 self.is_running = True
                 self.logger.info("Starting Telegram bot...")
-                self.application.run_polling(allowed_updates=Update.ALL_TYPES)
+                self.application.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
 
                 # After run_polling returns (e.g., due to network error),
                 # the loop will restart and wait for the next task
