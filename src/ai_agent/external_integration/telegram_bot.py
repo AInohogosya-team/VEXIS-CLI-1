@@ -181,6 +181,7 @@ class TelegramBotManager:
         
         # Running state
         self.is_running = False
+        self._should_restart = True
         
         # Message queue for sending messages from synchronous context
         self.message_queue: List[Tuple[int, str]] = []
@@ -216,6 +217,9 @@ class TelegramBotManager:
     @retry_on_network_error(max_retries=10, initial_delay=1.0, backoff_factor=2.0)
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /start command"""
+        if not update.effective_user or not update.message:
+            return
+
         user_id = update.effective_user.id
         
         if not self._is_user_allowed(user_id):
@@ -232,6 +236,9 @@ class TelegramBotManager:
     @retry_on_network_error(max_retries=10, initial_delay=1.0, backoff_factor=2.0)
     async def reset_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /reset command"""
+        if not update.effective_user or not update.message:
+            return
+
         user_id = update.effective_user.id
         
         if not self._is_user_allowed(user_id):
@@ -250,6 +257,9 @@ class TelegramBotManager:
     @retry_on_network_error(max_retries=10, initial_delay=1.0, backoff_factor=2.0)
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /help command"""
+        if not update.effective_user or not update.message:
+            return
+
         user_id = update.effective_user.id
         
         if not self._is_user_allowed(user_id):
@@ -290,6 +300,9 @@ class TelegramBotManager:
     @retry_on_network_error(max_retries=10, initial_delay=1.0, backoff_factor=2.0)
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle incoming messages - cancels previous task and starts new one immediately"""
+        if not update.effective_user or not update.message:
+            return
+
         user_id = update.effective_user.id
         
         if not self._is_user_allowed(user_id):
@@ -421,7 +434,7 @@ class TelegramBotManager:
     
     async def process_message_queue(self):
         """Process queued messages and send them"""
-        while True:
+        while self._should_restart:
             with self._queue_lock:
                 if not self.message_queue:
                     break
@@ -499,7 +512,7 @@ class TelegramBotManager:
             return False
 
         # Outer loop to ensure session remains active after task completion
-        while True:
+        while self._should_restart:
             try:
                 # Create application
                 self.application = Application.builder().token(self.bot_token).build()
@@ -520,16 +533,18 @@ class TelegramBotManager:
 
                 # After run_polling returns (e.g., due to network error),
                 # the loop will restart and wait for the next task
-                self.logger.info("Telegram bot polling stopped, restarting to wait for next task...")
+                self.logger.info("Telegram bot polling stopped")
                 self.is_running = False
                 self._stop_queue_processor()
 
-                # Small delay before restarting to avoid rapid restart loops
-                time.sleep(2)
+                if self._should_restart:
+                    self.logger.info("Restarting Telegram bot polling...")
+                    time.sleep(2)
 
             except KeyboardInterrupt:
                 self.logger.info("Keyboard interrupt received, stopping Telegram bot")
                 self.is_running = False
+                self._should_restart = False
                 self._stop_queue_processor()
                 break
             except Exception as e:
@@ -545,13 +560,19 @@ class TelegramBotManager:
     def stop_bot(self):
         """Stop the Telegram bot"""
         self.is_running = False
+        self._should_restart = False
         self._stop_queue_processor()
         
         if self.application:
             self.logger.info("Stopping Telegram bot...")
-            # Note: Proper shutdown requires async context, this is a simplified version
             if self.application.running:
-                asyncio.create_task(self.application.shutdown())
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(self.application.stop())
+                    loop.create_task(self.application.shutdown())
+                except RuntimeError:
+                    asyncio.run(self.application.stop())
+                    asyncio.run(self.application.shutdown())
 
 
 def create_telegram_bot(config_path: Optional[str] = None) -> Optional[TelegramBotManager]:
