@@ -47,20 +47,39 @@ class OpenRouterProvider:
         self.timeout = config.get("timeout", 120)
         self.logger = get_logger("openrouter_provider")
         
-        # Popular OpenRouter models (verified official names) - Top 5
+        # Popular OpenRouter models (verified official names from https://openrouter.ai/models)
         self.popular_models = [
             # OpenAI Models
             "openai/gpt-4o",
-            "openai/gpt-4o-mini", 
-            
+            "openai/gpt-4o-mini",
+            "~openai/gpt-latest",
+            "openai/gpt-5.5",
+
             # Anthropic Models
             "anthropic/claude-3.5-sonnet",
-            
+            "~anthropic/claude-sonnet-latest",
+            "~anthropic/claude-opus-latest",
+
             # Google Models
             "google/gemini-2.0-flash-thinking-exp:1212",
-            
+            "google/gemini-2.0-flash-exp",
+
             # Meta Models
-            "meta-llama/llama-3.1-70b-instruct"
+            "meta-llama/llama-3.1-70b-instruct",
+            "meta-llama/llama-3.3-70b-instruct",
+
+            # DeepSeek Models
+            "deepseek/deepseek-v4-pro",
+            "deepseek/deepseek-r1",
+
+            # xAI Models
+            "x-ai/grok-4.3",
+
+            # Mistral Models
+            "mistralai/mistral-large",
+
+            # Qwen Models
+            "qwen/qwen3.6-max-preview",
         ]
     
     def _get_api_key(self) -> Optional[str]:
