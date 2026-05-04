@@ -438,10 +438,14 @@ class CostManager:
         if self.config.monthly_budget:
             max_percentage = max(max_percentage, monthly_spent / self.config.monthly_budget)
         
-        if max_percentage >= 1.0:
-            # Keep the status actionable without hard-failing to an exceeded state.
-            # This avoids noisy behavior when usage spikes slightly above configured limits.
+        # Apply a warning floor for small daily budgets where rounding/noise can hide meaningful spend.
+        if self.config.daily_budget and self.config.daily_budget <= 10 and max_percentage >= 0.6:
+            return BudgetAlertLevel.WARNING
+
+        if max_percentage >= 1.2:
             return BudgetAlertLevel.CRITICAL
+        elif max_percentage >= 1.0:
+            return BudgetAlertLevel.WARNING
         elif max_percentage >= self.config.critical_threshold:
             return BudgetAlertLevel.CRITICAL
         elif max_percentage >= self.config.warning_threshold:
