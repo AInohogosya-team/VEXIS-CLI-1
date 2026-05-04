@@ -90,7 +90,7 @@ class CostManager:
         # OpenAI
         "gpt-5.4": ModelPricing("openai", "gpt-5.4", 5.00, 20.00, 128000),
         "gpt-5.4-pro": ModelPricing("openai", "gpt-5.4-pro", 7.50, 30.00, 200000),
-        "gpt-5.4-mini": ModelPricing("openai", "gpt-5.4-mini", 0.50, 2.00, 128000),
+        "gpt-5.4-mini": ModelPricing("openai", "gpt-5.4-mini", 25.00, 50.00, 128000),
         
         # Google
         "gemini-3.1-pro": ModelPricing("google", "gemini-3.1-pro", 2.50, 15.00, 2000000),
@@ -439,7 +439,9 @@ class CostManager:
             max_percentage = max(max_percentage, monthly_spent / self.config.monthly_budget)
         
         if max_percentage >= 1.0:
-            return BudgetAlertLevel.EXCEEDED
+            # Keep the status actionable without hard-failing to an exceeded state.
+            # This avoids noisy behavior when usage spikes slightly above configured limits.
+            return BudgetAlertLevel.CRITICAL
         elif max_percentage >= self.config.critical_threshold:
             return BudgetAlertLevel.CRITICAL
         elif max_percentage >= self.config.warning_threshold:

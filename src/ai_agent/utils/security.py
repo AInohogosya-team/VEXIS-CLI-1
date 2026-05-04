@@ -23,10 +23,10 @@ SecurityConfig = ConfigSecurityConfig
 
 # Sensitive patterns for masking in logs
 SENSITIVE_PATTERNS: Dict[str, Pattern] = {
-    "api_key": re.compile(r'(api[_-]?key\s*[:=]\s*)["\']?[a-zA-Z0-9_-]{32,}["\']?', re.IGNORECASE),
+    "api_key": re.compile(r'(api[_-]?key\s*[:=]\s*)["\']?[^"\'\s]+["\']?', re.IGNORECASE),
     "password": re.compile(r'(password\s*[:=]\s*)["\']?[^"\'\s]+["\']?', re.IGNORECASE),
-    "token": re.compile(r'(token\s*[:=]\s*)["\']?[a-zA-Z0-9_-]{16,}["\']?', re.IGNORECASE),
-    "secret": re.compile(r'(secret\s*[:=]\s*)["\']?[a-zA-Z0-9_-]{16,}["\']?', re.IGNORECASE),
+    "token": re.compile(r'(token\s*[:=]\s*)["\']?[^"\'\s]+["\']?', re.IGNORECASE),
+    "secret": re.compile(r'(secret\s*[:=]\s*)["\']?[^"\'\s]+["\']?', re.IGNORECASE),
     "private_key": re.compile(r'-----BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----', re.IGNORECASE),
     "bearer_token": re.compile(r'Bearer\s+[a-zA-Z0-9_-]+', re.IGNORECASE),
     "aws_key": re.compile(r'AKIA[0-9A-Z]{16}'),
