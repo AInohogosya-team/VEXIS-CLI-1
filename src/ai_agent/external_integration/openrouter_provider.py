@@ -21,8 +21,8 @@ try:
 except ImportError:
     raise ImportError("PIL (Pillow) is required for OpenRouter API provider")
 
-from ai_agent.utils.exceptions import APIError, ValidationError
-from ai_agent.utils.logger import get_logger
+from ..utils.exceptions import APIError, ValidationError
+from ..utils.logger import get_logger
 
 
 @dataclass

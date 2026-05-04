@@ -6,7 +6,7 @@ Handles Telegram bot communication and message management
 import asyncio
 import threading
 import time
-from typing import Optional, Dict, Any, List, Callable
+from typing import Optional, Dict, Any, List, Callable, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
 import json
@@ -184,6 +184,7 @@ class TelegramBotManager:
         
         # Message queue for sending messages from synchronous context
         self.message_queue: List[Tuple[int, str]] = []
+        self._queue_lock = threading.Lock()
         
         # Background thread for processing message queue
         self.queue_processor_thread: Optional[threading.Thread] = None
@@ -414,20 +415,25 @@ class TelegramBotManager:
         Queue a message to be sent from the async event loop.
         This method is synchronous and can be called from any context.
         """
-        self.message_queue.append((chat_id, message))
+        with self._queue_lock:
+            self.message_queue.append((chat_id, message))
         self.logger.info(f"Message queued for user {chat_id}")
     
     async def process_message_queue(self):
         """Process queued messages and send them"""
-        while self.message_queue:
-            chat_id, message = self.message_queue.pop(0)
+        while True:
+            with self._queue_lock:
+                if not self.message_queue:
+                    break
+                chat_id, message = self.message_queue.pop(0)
             try:
                 await self.send_message(chat_id, message)
                 self.logger.info(f"Sent queued message to user {chat_id}")
             except Exception as e:
                 self.logger.error(f"Failed to send queued message to user {chat_id}: {e}")
                 # Re-queue the message for retry (at the end of the queue)
-                self.message_queue.append((chat_id, message))
+                with self._queue_lock:
+                    self.message_queue.append((chat_id, message))
                 # Add a small delay before retrying to avoid tight loop
                 await asyncio.sleep(1)
     
@@ -439,11 +445,15 @@ class TelegramBotManager:
             self.queue_processor_running = True
             
             while self.queue_processor_running:
-                if self.message_queue and self.application:
+                with self._queue_lock:
+                    has_messages = bool(self.message_queue)
+
+                if has_messages and self.application:
                     try:
                         # Copy the queue to avoid concurrent modification
-                        messages_to_send = list(self.message_queue)
-                        self.message_queue.clear()
+                        with self._queue_lock:
+                            messages_to_send = list(self.message_queue)
+                            self.message_queue.clear()
                         
                         for chat_id, message in messages_to_send:
                             try:
@@ -452,7 +462,8 @@ class TelegramBotManager:
                             except Exception as e:
                                 self.logger.error(f"Failed to send queued message to user {chat_id}: {e}")
                                 # Re-queue the message for retry
-                                self.message_queue.append((chat_id, message))
+                                with self._queue_lock:
+                                    self.message_queue.append((chat_id, message))
                                 # Add delay before continuing to next message
                                 time.sleep(1)
                     except Exception as e:
