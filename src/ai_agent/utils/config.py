@@ -47,6 +47,9 @@ class APIConfig:
     # API keys for multiple providers
     api_keys: Dict[str, str] = field(default_factory=dict)
     
+    # Model configurations for multiple providers
+    models: Dict[str, str] = field(default_factory=dict)
+    
     # General settings
     timeout: int = 30
     max_retries: int = 3
