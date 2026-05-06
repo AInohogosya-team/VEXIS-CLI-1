@@ -113,7 +113,7 @@ security:
 
 performance:
   max_concurrent_tasks: 1
-  task_timeout: 300
+  task_timeout: 7200
   screenshot_timeout: 10
   api_timeout: 30
   memory_limit_mb: 1024

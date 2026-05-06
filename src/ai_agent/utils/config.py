@@ -80,7 +80,7 @@ class SecurityConfig:
 class PerformanceConfig:
     """Performance configuration"""
     max_concurrent_tasks: int = 1
-    task_timeout: int = 1500
+    task_timeout: int = 7200
     command_timeout: int = 600
     api_timeout: int = 30
     memory_limit_mb: int = 1024
@@ -98,7 +98,7 @@ class EngineConfig:
     max_task_retries: int = 3
     max_command_retries: int = 3
     command_timeout: int = 600
-    task_timeout: int = 1500
+    task_timeout: int = 7200
     max_rebuilds_per_session: int = 3
 
 
@@ -128,7 +128,7 @@ class ExecutionConfig:
     dry_run: bool = False
     verify_commands: bool = True
     command_timeout: int = 600
-    task_timeout: int = 1500
+    task_timeout: int = 7200
     max_iterations: int = 500
     auto_recovery: bool = True
     enable_phase2_summarization: bool = True

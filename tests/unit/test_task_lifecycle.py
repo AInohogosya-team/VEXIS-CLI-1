@@ -50,7 +50,7 @@ def test_execution_config_timeout_values_are_loaded_from_example_config():
     config = load_config("config.example.yaml", force_reload=True)
 
     assert config.execution.command_timeout == 30
-    assert config.execution.task_timeout == 1500
+    assert config.execution.task_timeout == 7200
     assert config.execution.max_iterations == 500
 
 

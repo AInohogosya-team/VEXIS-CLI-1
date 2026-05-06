@@ -87,7 +87,7 @@ verification:
 
 engine:
   command_timeout: 30  # Command execution timeout
-  task_timeout: 300  # Overall task timeout
+  task_timeout: 7200  # Overall task timeout (120 minutes)
   max_task_retries: 3  # Maximum task retries
 ```
 
