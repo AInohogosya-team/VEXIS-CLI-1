@@ -50,7 +50,7 @@ execution:
   
   # Timeouts
   command_timeout: 30        # seconds per command
-  task_timeout: 1500         # seconds per task
+  task_timeout: 7200         # seconds per task (120 minutes)
   
   # Retry settings
   max_iterations: 500         # max phase 2-4 loops
