@@ -44,6 +44,9 @@ class APIConfig:
     # OpenRouter configuration
     openrouter_api_key: str = ""
     
+    # API keys for multiple providers
+    api_keys: Dict[str, str] = field(default_factory=dict)
+    
     # General settings
     timeout: int = 30
     max_retries: int = 3
