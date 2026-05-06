@@ -21,15 +21,11 @@ class FivePhaseAIAgent:
     
     def __init__(self, provider: str = None, model: str = None, config_path: Optional[str] = None, 
                  telegram_bot=None):
-        self.config = load_config(config_path) if config_path else load_config()
+        self.config = load_config(config_path, force_reload=bool(config_path)) if config_path else load_config()
         self.logger = get_logger("five_phase_app")
         
         # Initialize 5-phase engine with provider and model
-        engine_config = {
-            "command_timeout": getattr(self.config.engine, 'command_timeout', 30),
-            "task_timeout": getattr(self.config.engine, 'task_timeout', 300),
-            "max_iterations": getattr(self.config.engine, 'max_iterations', 500),
-        }
+        engine_config = self._build_engine_config()
         
         self.engine = FivePhaseEngine(provider=provider, model=model, config=engine_config, 
                                      telegram_bot=telegram_bot)
@@ -39,7 +35,48 @@ class FivePhaseAIAgent:
         signal.signal(signal.SIGTERM, self._signal_handler)
         
         self.logger.info("5-Phase Pipeline AI Agent initialized")
-    
+
+    def _build_engine_config(self) -> Dict[str, Any]:
+        """Build engine config from both legacy and current config sections."""
+        execution = getattr(self.config, "execution", None)
+        engine = getattr(self.config, "engine", None)
+
+        engine_command_timeout = getattr(engine, "command_timeout", 600)
+        execution_command_timeout = getattr(execution, "command_timeout", 600)
+        engine_task_timeout = getattr(engine, "task_timeout", 5400)
+        execution_task_timeout = getattr(execution, "task_timeout", 5400)
+
+        return {
+            # Prefer explicit engine values, but honor the legacy execution
+            # section when the engine section is still at dataclass defaults.
+            "command_timeout": (
+                engine_command_timeout
+                if engine_command_timeout != 600
+                else execution_command_timeout
+            ),
+            "task_timeout": (
+                engine_task_timeout
+                if engine_task_timeout != 5400
+                else execution_task_timeout
+            ),
+            "max_iterations": getattr(
+                engine,
+                "max_iterations",
+                getattr(execution, "max_iterations", 500),
+            ),
+            "enable_phase2_summarization": getattr(
+                engine,
+                "enable_phase2_summarization",
+                getattr(execution, "enable_phase2_summarization", True),
+            ),
+        }
+
+    def _apply_runtime_options(self, options: Dict[str, Any]) -> None:
+        """Apply CLI/runtime options to the already-created engine."""
+        for option_name in ("command_timeout", "task_timeout", "max_iterations"):
+            if option_name in options and options[option_name] is not None:
+                setattr(self.engine, option_name, options[option_name])
+
     def run(self, instruction: str, options: Dict[str, Any], conversation_history=None) -> int:
         """Run AI Agent with instruction using 5-phase pipeline"""
         try:
@@ -59,6 +96,8 @@ class FivePhaseAIAgent:
             if not instruction or not instruction.strip():
                 self.logger.error("Instruction cannot be empty")
                 return 1
+
+            self._apply_runtime_options(options)
             
             # Execute instruction using 5-phase engine with conversation history
             context = self.engine.execute_instruction(
@@ -325,7 +364,7 @@ def main():
     
     # Create 5-Phase AI Agent
     try:
-        agent = FivePhaseAIAgent(args.config)
+        agent = FivePhaseAIAgent(config_path=args.config)
     except Exception as e:
         print(f"Failed to initialize 5-Phase AI Agent: {e}", file=sys.stderr)
         return 1

@@ -11,6 +11,7 @@ import subprocess
 import shlex
 import platform
 import stat
+import signal
 from typing import Optional, Dict, Any, List, Union
 from dataclasses import dataclass, field, asdict
 from pathlib import Path, PurePath
@@ -1122,12 +1123,13 @@ class TerminalHistory:
         """Execute multiple commands in a single subprocess batch with inactivity-based timeout.
         
         Uses two timeout mechanisms:
-        - Overall timeout: 10 hours (36000 seconds) maximum total execution time
-        - Inactivity timeout: 10 minutes (600 seconds) - kills process if no new output
+        - Overall timeout: the configured command timeout.
+        - Inactivity timeout: at least the default timeout, extended to match
+          larger configured command timeouts.
         
         Args:
             commands: List of commands to execute
-            timeout: Maximum overall timeout in seconds (default: 10 hours)
+            timeout: Maximum overall timeout in seconds
             
         Returns:
             SimpleNamespace with returncode, stdout, stderr
@@ -1135,11 +1137,13 @@ class TerminalHistory:
         import threading
         from types import SimpleNamespace
         
-        # Constants
-        OVERALL_TIMEOUT = 86400  # 24 hours
-        INACTIVITY_TIMEOUT = 86400  # 24 hours (disabled for background operation)
+        overall_timeout = timeout
+        inactivity_timeout = max(timeout, self.DEFAULT_TIMEOUT)
         
-        # Join commands with newlines to execute sequentially in same shell
+        # Join commands with newlines to execute sequentially in same shell.
+        # Commands that explicitly end with "&" are treated as persistent
+        # background tasks and detached from the temporary shell so they are not
+        # killed when the batch shell exits or when Telegram returns a response.
         processed_commands = []
         for cmd in commands:
             cmd_stripped = cmd.strip()
@@ -1150,6 +1154,8 @@ class TerminalHistory:
                     processed_commands.append(f"cd {target_dir} || exit 1")
                 else:
                     processed_commands.append("cd ~ || exit 1")
+            elif self._is_background_command(cmd_stripped):
+                processed_commands.append(self._detach_background_command(cmd_stripped))
             else:
                 processed_commands.append(cmd_stripped)
         
@@ -1208,7 +1214,8 @@ class TerminalHistory:
                     shell=False,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
-                    cwd=str(self._current_directory)
+                    cwd=str(self._current_directory),
+                    start_new_session=True
                 )
             
             # Start threads to read output
@@ -1227,24 +1234,16 @@ class TerminalHistory:
                 elapsed = current_time - start_time
                 since_last_output = current_time - last_output_time[0]
                 
-                # Check overall timeout (5 hours)
-                if elapsed > OVERALL_TIMEOUT:
+                if elapsed > overall_timeout:
                     is_timed_out[0] = True
-                    timeout_reason[0] = f"Overall timeout exceeded ({OVERALL_TIMEOUT}s)"
-                    process.terminate()
-                    time.sleep(1)
-                    if process.poll() is None:
-                        process.kill()
+                    timeout_reason[0] = f"Overall timeout exceeded ({overall_timeout}s)"
+                    self._terminate_process_tree(process)
                     break
                 
-                # Check inactivity timeout (10 minutes)
-                if since_last_output > INACTIVITY_TIMEOUT:
+                if since_last_output > inactivity_timeout:
                     is_timed_out[0] = True
-                    timeout_reason[0] = f"No output for {INACTIVITY_TIMEOUT}s - process appears stuck"
-                    process.terminate()
-                    time.sleep(1)
-                    if process.poll() is None:
-                        process.kill()
+                    timeout_reason[0] = f"No output for {inactivity_timeout}s - process appears stuck"
+                    self._terminate_process_tree(process)
                     break
                 
                 time.sleep(0.1)
@@ -1286,6 +1285,59 @@ class TerminalHistory:
             try:
                 if 'script_path' in locals() and os.path.exists(script_path):
                     os.unlink(script_path)
+            except Exception:
+                pass
+
+    def _is_background_command(self, command: str) -> bool:
+        """Return True when a command explicitly requests background execution."""
+        return command.rstrip().endswith('&') and not command.rstrip().endswith('&&')
+
+    def _detach_background_command(self, command: str) -> str:
+        """Detach an explicit background command so it survives batch shell exit.
+
+        The 5-phase pipeline runs commands from a temporary shell. Plain
+        ``cmd &`` jobs can keep inherited pipes open or receive SIGHUP when that
+        shell exits, which makes long-running services appear to terminate
+        unpredictably, especially in Telegram mode. This wrapper redirects
+        output to a per-session log, starts the process with nohup, and prints
+        the PID for later inspection.
+        """
+        inner_command = command.rstrip()[:-1].strip()
+        if not inner_command:
+            return command
+
+        if self._platform == "windows":
+            return f'start /b cmd /c "{inner_command}"'
+
+        background_dir = self.history_dir / "background_jobs"
+        background_dir.mkdir(parents=True, exist_ok=True)
+        log_path = background_dir / f"{self.session_id}_{int(time.time() * 1000)}.log"
+        quoted_inner = shlex.quote(inner_command)
+        quoted_log = shlex.quote(str(log_path))
+        return (
+            f"nohup bash -lc {quoted_inner} > {quoted_log} 2>&1 < /dev/null & "
+            f"echo 'Started background process PID:' $! '(log: {log_path})'"
+        )
+
+    def _terminate_process_tree(self, process) -> None:
+        """Terminate the batch process and its foreground children."""
+        try:
+            if self._platform != "windows":
+                os.killpg(process.pid, signal.SIGTERM)
+            else:
+                process.terminate()
+            time.sleep(1)
+            if process.poll() is None:
+                if self._platform != "windows":
+                    os.killpg(process.pid, signal.SIGKILL)
+                else:
+                    process.kill()
+        except ProcessLookupError:
+            pass
+        except Exception as e:
+            self.logger.warning(f"Failed to terminate process tree cleanly: {e}")
+            try:
+                process.kill()
             except Exception:
                 pass
 
