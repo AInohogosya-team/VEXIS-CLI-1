@@ -107,6 +107,15 @@ class TelegramConfig:
     """Telegram bot configuration"""
     enabled: bool = False
     bot_token: str = ""
+    bot_username: str = ""
+    api_id: int = 0
+    api_hash: str = ""
+    session_name: str = ""
+    contacts: list = field(default_factory=list)
+    authorized_users: list = field(default_factory=list)
+    output_recipients: list = field(default_factory=list)
+    enable_input_listener: bool = False
+    send_phase2_end_updates: bool = False
     allowed_user_ids: list = field(default_factory=list)
     max_history_length: int = 50
 
@@ -126,6 +135,34 @@ class ExecutionConfig:
 
 
 @dataclass
+class CacheConfig:
+    """Cache configuration"""
+    enabled: bool = True
+    max_size: int = 1000
+    ttl: int = 3600
+    persist_to_disk: bool = True
+
+
+@dataclass
+class CostConfig:
+    """Cost management configuration"""
+    daily_budget: Optional[float] = None
+    monthly_budget: Optional[float] = None
+    per_request_budget: Optional[float] = None
+    warning_threshold: float = 0.8
+    critical_threshold: float = 0.95
+
+
+@dataclass
+class UserConfig:
+    """User preferences configuration"""
+    name: str = ""
+    preferred_style: str = "detailed"
+    auto_confirm: bool = False
+    show_progress: bool = True
+
+
+@dataclass
 class Config:
     """Main configuration class"""
     logging: LoggingConfig = field(default_factory=LoggingConfig)
@@ -135,6 +172,9 @@ class Config:
     engine: EngineConfig = field(default_factory=EngineConfig)
     telegram: TelegramConfig = field(default_factory=TelegramConfig)
     execution: ExecutionConfig = field(default_factory=ExecutionConfig)
+    cache: CacheConfig = field(default_factory=CacheConfig)
+    cost: CostConfig = field(default_factory=CostConfig)
+    user: UserConfig = field(default_factory=UserConfig)
     
     # Platform-specific settings
     platform: Dict[str, Any] = field(default_factory=dict)
@@ -275,6 +315,9 @@ class ConfigManager:
                 engine=EngineConfig(**self._raw_config.get("engine", {})),
                 telegram=TelegramConfig(**self._raw_config.get("telegram", {})),
                 execution=ExecutionConfig(**self._raw_config.get("execution", {})),
+                cache=CacheConfig(**self._raw_config.get("cache", {})),
+                cost=CostConfig(**self._raw_config.get("cost", {})),
+                user=UserConfig(**self._raw_config.get("user", {})),
                 platform=self._raw_config.get("platform", {}),
                 custom=self._raw_config.get("custom", {}),
             )
