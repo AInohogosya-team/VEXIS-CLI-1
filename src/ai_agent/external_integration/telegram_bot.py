@@ -4,6 +4,7 @@ Handles Telegram bot communication and message management
 """
 
 import asyncio
+import inspect
 import threading
 import time
 from typing import Optional, Dict, Any, List, Callable
@@ -158,6 +159,16 @@ class QueuedTelegramMessage:
     next_attempt_at: float = 0.0
 
 
+
+
+@dataclass
+class RunningTelegramTask:
+    """A Telegram pipeline task plus the cancellation event passed to it."""
+
+    task: asyncio.Task
+    cancel_event: threading.Event
+
+
 class TelegramBotManager:
     """
     Manages Telegram bot integration for AI agent
@@ -182,8 +193,8 @@ class TelegramBotManager:
         # Callback for processing messages
         self.message_callback: Optional[Callable[[str, int], str]] = None
         
-        # Track running tasks per user to prevent overlapping pipeline runs
-        self._current_tasks: Dict[int, asyncio.Task] = {}
+        # Track running tasks per user so a newer prompt can supersede old work
+        self._current_tasks: Dict[int, RunningTelegramTask] = {}
         self._task_lock = asyncio.Lock()
         
         # Application instance
@@ -287,25 +298,23 @@ class TelegramBotManager:
         )
     
     async def _cancel_user_task(self, user_id: int):
-        """Cancel any running task for the specified user"""
-        async with self._task_lock:
-            if user_id in self._current_tasks:
-                task = self._current_tasks[user_id]
-                if not task.done():
-                    self.logger.info(f"Cancelling running task for user {user_id}")
-                    task.cancel()
-                    try:
-                        await asyncio.wait_for(task, timeout=2.0)
-                    except (asyncio.CancelledError, asyncio.TimeoutError):
-                        pass
-                del self._current_tasks[user_id]
-    
+        """Signal any running task for the specified user to stop."""
+        running = self._current_tasks.get(user_id)
+        if not running:
+            return
+
+        if not running.task.done():
+            self.logger.info(f"Cancelling running task for user {user_id}")
+            running.cancel_event.set()
+            running.task.cancel()
+
     async def _process_message_async(self, user_message: str, user_id: int, 
-                                      processing_msg, history) -> str:
-        """Process message asynchronously with cancellation support"""
+                                      processing_msg, history, cancel_event: threading.Event) -> str:
+        """Process message asynchronously with cancellation support."""
         if self.message_callback:
-            # Run callback in thread pool to allow cancellation
             loop = asyncio.get_event_loop()
+            if len(inspect.signature(self.message_callback).parameters) >= 3:
+                return await loop.run_in_executor(None, self.message_callback, user_message, user_id, cancel_event)
             return await loop.run_in_executor(None, self.message_callback, user_message, user_id)
         return "⚠️ Message callback not set. Bot not properly configured."
     
@@ -331,18 +340,14 @@ class TelegramBotManager:
             await self.reset_command(update, context)
             return
         
-        # A sync executor task cannot be force-stopped once the AI pipeline has
-        # entered provider/terminal code. Starting another pipeline against the
-        # shared engine at the same time can corrupt state and make Telegram look
-        # unresponsive, so keep the bot responsive by rejecting overlapping work.
+        # New prompts supersede older work. Signal the old pipeline to stop and
+        # immediately start the newest request while preserving conversation history.
         async with self._task_lock:
             running_task = self._current_tasks.get(user_id)
-            if running_task and not running_task.done():
-                await update.message.reply_text(
-                    "⏳ A previous request is still running. Please wait for it to finish, "
-                    "then send your next message."
-                )
-                return
+            if running_task and not running_task.task.done():
+                running_task.cancel_event.set()
+                running_task.task.cancel()
+                await update.message.reply_text("🔄 Previous request cancelled. Switching to your latest message...")
         
         # Add user message to conversation history
         history = self.get_conversation_history(user_id)
@@ -352,21 +357,22 @@ class TelegramBotManager:
         processing_msg = await update.message.reply_text("⏳ Processing your request...")
         
         # Create and track new task for this user
+        cancel_event = threading.Event()
         async with self._task_lock:
             task = asyncio.create_task(
-                self._handle_message_task(user_id, user_message, processing_msg, history)
+                self._handle_message_task(user_id, user_message, processing_msg, history, cancel_event)
             )
-            self._current_tasks[user_id] = task
+            self._current_tasks[user_id] = RunningTelegramTask(task=task, cancel_event=cancel_event)
     
     async def _handle_message_task(self, user_id: int, user_message: str, 
-                                    processing_msg, history):
+                                    processing_msg, history, cancel_event: threading.Event):
         """Actual message processing task that can be cancelled"""
         try:
             if self.message_callback:
-                response = await self._process_message_async(user_message, user_id, processing_msg, history)
+                response = await self._process_message_async(user_message, user_id, processing_msg, history, cancel_event)
                 
                 # Check if task was cancelled
-                if asyncio.current_task().cancelled():
+                if cancel_event.is_set() or asyncio.current_task().cancelled():
                     self.logger.info(f"Task for user {user_id} was cancelled, skipping response")
                     return
                 
@@ -403,7 +409,8 @@ class TelegramBotManager:
         finally:
             # Clean up task reference
             async with self._task_lock:
-                if user_id in self._current_tasks and self._current_tasks[user_id] == asyncio.current_task():
+                running = self._current_tasks.get(user_id)
+                if running and running.task == asyncio.current_task():
                     del self._current_tasks[user_id]
     
     def _is_user_allowed(self, user_id: int) -> bool:
