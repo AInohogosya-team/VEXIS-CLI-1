@@ -492,8 +492,3 @@ class ZhipuAILLMClient(BaseLLM):
             self.get_model_info("glm-4"),
         ]
     
-    def count_tokens(self, text: str, model: Optional[str] = None) -> int:
-        """Count tokens in given text for ZhipuAI model."""
-        # ZhipuAI uses similar tokenization to other models
-        # This is a rough estimate
-        return len(text) // 4

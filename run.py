@@ -706,7 +706,7 @@ def prompt_for_google_api_key():
                 continue
             
             # API keys are not saved anymore - just return the key
-            return api_key, False
+            return api_key
             
         except KeyboardInterrupt:
             print(f"\n{Colors.BRIGHT_YELLOW}Operation cancelled.{Colors.RESET}")

@@ -459,7 +459,3 @@ class MiniMaxLLMClient(BaseLLM):
             self.get_model_info("minimax-m2.5"),
             self.get_model_info("minimax-m2"),
         ]
-    
-    def count_tokens(self, text: str, model: Optional[str] = None) -> int:
-        """Count tokens in given text for MiniMax model."""
-        return len(text) // 4

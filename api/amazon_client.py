@@ -163,7 +163,8 @@ class AmazonLLMClient(BaseLLM):
                 content="",
                 model=model or self.default_model,
                 provider="amazon",
-                error=str(e)
+                error=str(e),
+                latency=time.time() - start_time
             )
 
     def generate_stream(
@@ -195,25 +196,6 @@ class AmazonLLMClient(BaseLLM):
                 chunk_data = json.loads(event['chunk']['bytes'])
                 if 'outputText' in chunk_data:
                     yield chunk_data['outputText']
-
-    async def generate_async(
-        self,
-        prompt: str,
-        config: Optional[GenerationConfig] = None,
-        model: Optional[str] = None,
-        **kwargs
-    ) -> LLMResponse:
-        return self.generate(prompt, config, model, **kwargs)
-
-    async def generate_stream_async(
-        self,
-        prompt: str,
-        config: Optional[GenerationConfig] = None,
-        model: Optional[str] = None,
-        **kwargs
-    ) -> AsyncIterator[str]:
-        for chunk in self.generate_stream(prompt, config, model, **kwargs):
-            yield chunk
 
     def list_models(self) -> List[ModelInfo]:
         return [
@@ -264,12 +246,3 @@ class AmazonLLMClient(BaseLLM):
                 description="LEGACY: Older generation text model - use Nova instead"
             ),
         ]
-
-    def get_model_info(self, model_id: str) -> Optional[ModelInfo]:
-        for model in self.list_models():
-            if model.id == model_id:
-                return model
-        return None
-
-    def count_tokens(self, text: str, model: Optional[str] = None) -> int:
-        return len(text) // 4

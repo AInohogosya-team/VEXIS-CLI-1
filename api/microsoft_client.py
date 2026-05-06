@@ -171,7 +171,8 @@ class MicrosoftLLMClient(BaseLLM):
                 content="",
                 model=model or self.default_model,
                 provider="microsoft",
-                error=str(e)
+                error=str(e),
+                latency=time.time() - start_time
             )
 
     def generate_stream(
@@ -201,34 +202,7 @@ class MicrosoftLLMClient(BaseLLM):
             if chunk.choices and chunk.choices[0].delta.content:
                 yield chunk.choices[0].delta.content
 
-    async def generate_async(
-        self,
-        prompt: str,
-        config: Optional[GenerationConfig] = None,
-        model: Optional[str] = None,
-        **kwargs
-    ) -> LLMResponse:
-        return self.generate(prompt, config, model, **kwargs)
-
-    async def generate_stream_async(
-        self,
-        prompt: str,
-        config: Optional[GenerationConfig] = None,
-        model: Optional[str] = None,
-        **kwargs
-    ) -> AsyncIterator[str]:
-        for chunk in self.generate_stream(prompt, config, model, **kwargs):
-            yield chunk
-
     def list_models(self) -> List[ModelInfo]:
         """Return empty list - model validation happens at API call time"""
         return []
 
-    def get_model_info(self, model_id: str) -> Optional[ModelInfo]:
-        for model in self.list_models():
-            if model.id == model_id:
-                return model
-        return None
-
-    def count_tokens(self, text: str, model: Optional[str] = None) -> int:
-        return len(text) // 4

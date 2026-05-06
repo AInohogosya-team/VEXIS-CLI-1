@@ -184,7 +184,6 @@ class BaseLLM(ABC):
         """
         pass
     
-    @abstractmethod
     async def generate_async(
         self,
         prompt: str,
@@ -194,17 +193,11 @@ class BaseLLM(ABC):
         """
         Asynchronously generate a response from the LLM.
         
-        Args:
-            prompt: The input prompt/text
-            config: Generation configuration parameters
-            **kwargs: Additional provider-specific parameters
-            
-        Returns:
-            LLMResponse containing the generated content and metadata
+        Default implementation wraps sync method for providers without true async support.
+        Override this method if the provider has native async support.
         """
-        pass
+        return self.generate(prompt, config, **kwargs)
     
-    @abstractmethod
     async def generate_stream_async(
         self,
         prompt: str,
@@ -214,15 +207,11 @@ class BaseLLM(ABC):
         """
         Asynchronously generate a streaming response.
         
-        Args:
-            prompt: The input prompt/text
-            config: Generation configuration parameters
-            **kwargs: Additional provider-specific parameters
-            
-        Yields:
-            Text chunks (strings) as they are generated
+        Default implementation wraps sync method for providers without true async support.
+        Override this method if the provider has native async streaming support.
         """
-        pass
+        for chunk in self.generate_stream(prompt, config, **kwargs):
+            yield chunk
     
     @abstractmethod
     def list_models(self) -> List[ModelInfo]:
@@ -234,10 +223,12 @@ class BaseLLM(ABC):
         """
         pass
     
-    @abstractmethod
     def get_model_info(self, model_id: str) -> Optional[ModelInfo]:
         """
         Get information about a specific model.
+        
+        Default implementation searches through list_models().
+        Override this method for more efficient lookup or custom logic.
         
         Args:
             model_id: The model identifier
@@ -245,12 +236,17 @@ class BaseLLM(ABC):
         Returns:
             ModelInfo if found, None otherwise
         """
-        pass
+        for model in self.list_models():
+            if model.id == model_id:
+                return model
+        return None
     
-    @abstractmethod
     def count_tokens(self, text: str, model: Optional[str] = None) -> int:
         """
         Count tokens in the given text for a specific model.
+        
+        Default implementation provides a rough estimate (len(text) // 4).
+        Override this method for more accurate token counting using provider SDKs.
         
         Args:
             text: The text to count tokens for
@@ -259,7 +255,7 @@ class BaseLLM(ABC):
         Returns:
             Estimated token count
         """
-        pass
+        return len(text) // 4
     
     def is_available(self) -> bool:
         """

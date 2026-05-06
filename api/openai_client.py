@@ -510,10 +510,6 @@ class OpenAILLMClient(BaseLLM):
         # This ensures we don't provide fallback models that override user selection
         return []
 
-    def _get_fallback_models(self) -> List[ModelInfo]:
-        """Return empty list - no fallback models to avoid overriding user selection"""
-        return []
-
     def get_model_info(self, model_id: str) -> Optional[ModelInfo]:
         """Get information about a specific model"""
         models = self.list_models()
