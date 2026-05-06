@@ -77,7 +77,9 @@ Input: {user_prompt}
 
 Summary (one sentence only):''',
 
-            TaskType.PHASE2_COMMAND_EXTRACTION.value: '''Please look at this: {phase_1_output}. This is a relatively long text with many explanations, but please put all the necessary commands into a single code block. You may use only one code block.{conversation_history}''',
+            TaskType.PHASE2_COMMAND_EXTRACTION.value: '''Please look at this: {phase_1_output}. This is a relatively long text with many explanations, but please put all the necessary commands into a single code block. You may use only one code block.
+
+IMPORTANT FOR LONG-RUNNING SERVICES: If the requested task starts a server, bot, watcher, scheduler, tunnel, or any process that should keep running after this pipeline response is sent, run it as an explicit background command by ending the command with `&` and include a separate verification command (for example `ps`, `curl`, or log inspection). Do not leave long-running services in the foreground, because foreground commands are subject to execution timeouts.{conversation_history}''',
 
             TaskType.PHASE4_LOG_EVALUATION.value: '''I executed the commands to carry out the instruction {user_prompt}. This resulted in the following log: {full_terminal_log_so_far} However, since I am a beginner, I do not know if it succeeded or failed.
 

@@ -109,6 +109,14 @@ class TelegramConfig:
 class ExecutionConfig:
     """Execution mode configuration"""
     mode: str = "auto"  # "auto", "normal", or "telegram"
+    safety_mode: bool = True
+    dry_run: bool = False
+    verify_commands: bool = True
+    command_timeout: int = 600
+    task_timeout: int = 5400
+    max_iterations: int = 500
+    auto_recovery: bool = True
+    enable_phase2_summarization: bool = True
 
 
 @dataclass
