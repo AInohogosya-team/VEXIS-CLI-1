@@ -8,6 +8,7 @@ import json
 import time
 import os
 import subprocess
+import threading
 import shlex
 import platform
 import stat
@@ -119,6 +120,9 @@ class TerminalHistory:
             
             # Initialize logger
             self.logger = get_logger("terminal_history")
+            self._execution_lock = threading.Lock()
+            self._current_process = None
+            self._current_process_lock = threading.Lock()
             
             # Initialize terminal session
             # SECURITY FIX: Start from user's home directory instead of root (/)
@@ -971,7 +975,15 @@ class TerminalHistory:
             self._current_directory = original_dir
             self.terminal_session.current_working_directory = str(self._current_directory)
 
-    def execute_commands_batch(self, commands: List[str], timeout: Optional[int] = None) -> Dict[str, Any]:
+    def cancel_current_command(self) -> None:
+        """Terminate the currently running foreground command batch, if any."""
+        with self._current_process_lock:
+            process = self._current_process
+        if process and process.poll() is None:
+            self.logger.info("Cancelling active command batch")
+            self._terminate_process_tree(process)
+
+    def execute_commands_batch(self, commands: List[str], timeout: Optional[int] = None, cancel_event=None) -> Dict[str, Any]:
         """
         Execute multiple commands in a single batch using the same terminal session.
         All commands are pasted and executed at once, maintaining the same session.
@@ -1015,8 +1027,11 @@ class TerminalHistory:
                            command_count=len(commands),
                            working_directory=str(self._current_directory))
             
-            # Execute all commands in a single shell session
-            result = self._execute_batch_subprocess(commands, timeout)
+            # Execute all commands in a single shell session. The lock keeps
+            # overlapping user requests from running two foreground command
+            # batches against the same terminal history at the same time.
+            with self._execution_lock:
+                result = self._execute_batch_subprocess(commands, timeout, cancel_event=cancel_event)
             
             duration = time.time() - start_time
             
@@ -1119,7 +1134,7 @@ class TerminalHistory:
                 "working_directory": str(self._current_directory)
             }
 
-    def _execute_batch_subprocess(self, commands: List[str], timeout: int):
+    def _execute_batch_subprocess(self, commands: List[str], timeout: int, cancel_event=None):
         """Execute multiple commands in a single subprocess batch with inactivity-based timeout.
         
         Uses two timeout mechanisms:
@@ -1218,6 +1233,8 @@ class TerminalHistory:
                     start_new_session=True
                 )
             
+            with self._current_process_lock:
+                self._current_process = process
             # Start threads to read output
             stdout_thread = threading.Thread(target=read_output, args=(process.stdout, stdout_lines, False))
             stderr_thread = threading.Thread(target=read_output, args=(process.stderr, stderr_lines, True))
@@ -1246,6 +1263,12 @@ class TerminalHistory:
                     self._terminate_process_tree(process)
                     break
                 
+                if cancel_event and cancel_event.is_set():
+                    is_timed_out[0] = True
+                    timeout_reason[0] = "Cancelled by newer user request"
+                    self._terminate_process_tree(process)
+                    break
+
                 time.sleep(0.1)
             
             # Wait for threads to finish
@@ -1281,6 +1304,9 @@ class TerminalHistory:
                 stderr=f"Execution failed: {str(e)}"
             )
         finally:
+            with self._current_process_lock:
+                if self._current_process is locals().get("process"):
+                    self._current_process = None
             # Clean up temp script file
             try:
                 if 'script_path' in locals() and os.path.exists(script_path):

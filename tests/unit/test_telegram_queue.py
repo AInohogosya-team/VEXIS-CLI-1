@@ -1,10 +1,11 @@
 """Tests for Telegram queue resilience."""
 
 import asyncio
+import threading
 import time
 from unittest.mock import AsyncMock, Mock
 
-from ai_agent.external_integration.telegram_bot import TelegramBotManager
+from ai_agent.external_integration.telegram_bot import RunningTelegramTask, TelegramBotManager
 
 
 def test_process_message_queue_drops_after_bounded_retries():
@@ -37,12 +38,13 @@ def test_process_message_queue_skips_delayed_retries_without_blocking():
     bot.send_message.assert_not_awaited()
 
 
-def test_handle_message_rejects_overlapping_user_task():
+def test_handle_message_cancels_overlapping_user_task_and_starts_latest():
     bot = TelegramBotManager(bot_token="dummy-token")
     user_id = 123
     running_task = Mock()
     running_task.done.return_value = False
-    bot._current_tasks[user_id] = running_task
+    running_cancel_event = threading.Event()
+    bot._current_tasks[user_id] = RunningTelegramTask(task=running_task, cancel_event=running_cancel_event)
 
     update = Mock()
     update.effective_user.id = user_id
@@ -51,5 +53,8 @@ def test_handle_message_rejects_overlapping_user_task():
 
     asyncio.run(bot.handle_message(update, Mock()))
 
-    update.message.reply_text.assert_awaited_once()
-    assert "previous request is still running" in update.message.reply_text.await_args.args[0]
+    assert update.message.reply_text.await_count == 2
+    assert "Previous request cancelled" in update.message.reply_text.await_args_list[0].args[0]
+    assert update.message.reply_text.await_args_list[1].args[0] == "⏳ Processing your request..."
+    assert running_cancel_event.is_set()
+    running_task.cancel.assert_called_once()

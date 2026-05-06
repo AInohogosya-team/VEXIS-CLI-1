@@ -77,7 +77,7 @@ class FivePhaseAIAgent:
             if option_name in options and options[option_name] is not None:
                 setattr(self.engine, option_name, options[option_name])
 
-    def run(self, instruction: str, options: Dict[str, Any], conversation_history=None) -> int:
+    def run(self, instruction: str, options: Dict[str, Any], conversation_history=None, cancel_event=None) -> int:
         """Run AI Agent with instruction using 5-phase pipeline"""
         try:
             self.logger.info(
@@ -100,17 +100,20 @@ class FivePhaseAIAgent:
             self._apply_runtime_options(options)
             
             # Execute instruction using 5-phase engine with conversation history
-            context = self.engine.execute_instruction(
-                instruction,
-                conversation_history=conversation_history,
-                telegram_mode=False
-            )
+            execute_kwargs = {
+                "conversation_history": conversation_history,
+                "telegram_mode": False,
+            }
+            if cancel_event is not None:
+                execute_kwargs["cancel_event"] = cancel_event
+
+            context = self.engine.execute_instruction(instruction, **execute_kwargs)
             
             # Determine success based on final phase
             success = context.current_phase == PipelinePhase.COMPLETED
             
             # Print results if not quiet mode
-            if not options.get("quiet"):
+            if not options.get("quiet") and not getattr(context, "cancelled", False):
                 self._print_results(context, instruction, success)
             
             # Save results if requested

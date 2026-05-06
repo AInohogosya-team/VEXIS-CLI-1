@@ -2032,7 +2032,7 @@ def main():
             print("Press Ctrl+C to stop the bot.")
             
             # Set the message callback
-            def process_telegram_message(message: str, user_id: int) -> str:
+            def process_telegram_message(message: str, user_id: int, cancel_event=None) -> str:
                 """Process message from Telegram and return response"""
                 # Get conversation history for this user
                 conversation_history = telegram_bot.get_conversation_history(user_id)
@@ -2042,7 +2042,8 @@ def main():
                     user_prompt=message,
                     conversation_history=conversation_history,
                     telegram_mode=True,
-                    telegram_user_id=user_id
+                    telegram_user_id=user_id,
+                    cancel_event=cancel_event
                 )
                 
                 # Return the final summary as response
@@ -2070,22 +2071,45 @@ def main():
             # Create conversation history for normal mode (use user_id=0 for single user)
             conversation_history = ConversationHistory(user_id=0, max_length=50)
             
-            # Interactive loop
-            while True:
-                # Check for /reset command
-                if instruction.strip() == "/reset":
-                    # Clear conversation history
-                    conversation_history.clear()
-                    
-                    # Clear terminal history
-                    if agent.engine and hasattr(agent.engine, 'terminal_history'):
-                        agent.engine.terminal_history.clear_session()
-                        print("✅ Terminal logs cleared.")
-                    
-                    print("✅ Conversation history and terminal logs cleared.")
-                    print("\nEnter your instruction (or 'quit' to exit, '/reset' to clear context):")
-                    try:
-                        instruction = input("> ")
+            # Interactive loop. The pipeline runs in a worker thread so stdin
+            # remains responsive. If the user types a new prompt while work is
+            # running, the previous task is cancelled and the latest prompt starts.
+            import concurrent.futures
+            import select
+            import threading
+
+            executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
+            current_future = None
+            current_cancel_event = None
+            def read_next_instruction(prompt_text: str = "> "):
+                print(prompt_text, end="", flush=True)
+                try:
+                    return input()
+                except (EOFError, KeyboardInterrupt):
+                    print("\nExiting...")
+                    sys.exit(0)
+
+            def start_instruction(next_instruction: str):
+                cancel_event = threading.Event()
+                conversation_history.add_message("user", next_instruction)
+                future = executor.submit(
+                    agent.run,
+                    next_instruction,
+                    options,
+                    conversation_history,
+                    cancel_event,
+                )
+                return future, cancel_event, next_instruction
+
+            try:
+                while True:
+                    if instruction.strip() == "/reset":
+                        conversation_history.clear()
+                        if agent.engine and hasattr(agent.engine, 'terminal_history'):
+                            agent.engine.terminal_history.clear_session()
+                            print("✅ Terminal logs cleared.")
+                        print("✅ Conversation history and terminal logs cleared.")
+                        instruction = read_next_instruction("\nEnter your instruction (or 'quit' to exit, '/reset' to clear context):\n> ")
                         if instruction.lower() in ['quit', 'exit', 'q']:
                             print("Exiting...")
                             sys.exit(0)
@@ -2093,40 +2117,76 @@ def main():
                             print("No instruction provided. Exiting...")
                             sys.exit(0)
                         continue
-                    except (EOFError, KeyboardInterrupt):
-                        print("\nExiting...")
-                        sys.exit(0)
-                
-                # Add user message to conversation history
-                conversation_history.add_message("user", instruction)
-                
-                # Execute instruction with conversation history
-                result = agent.run(instruction, options, conversation_history=conversation_history)
-                
-                if result == 0:
-                    print("\n✓ Task completed successfully")
-                else:
-                    print("\n✗ Task failed")
-                
-                # Add the final summary to conversation history
-                if agent.engine and hasattr(agent.engine, 'terminal_history'):
-                    last_output = agent.engine.terminal_history.get_last_command_output()
-                    if last_output:
-                        conversation_history.add_message("assistant", last_output)
-                
-                # Prompt for next instruction
-                print("\nEnter your instruction (or 'quit' to exit, '/reset' to clear context):")
-                try:
-                    instruction = input("> ")
-                    if instruction.lower() in ['quit', 'exit', 'q']:
-                        print("Exiting...")
-                        sys.exit(0)
-                    if not instruction.strip():
-                        print("No instruction provided. Exiting...")
-                        sys.exit(0)
-                except (EOFError, KeyboardInterrupt):
-                    print("\nExiting...")
-                    sys.exit(0)
+
+                    current_future, current_cancel_event, _ = start_instruction(instruction)
+                    print("\nTask is running. Type a new prompt and press Enter to cancel it and switch tasks.")
+
+                    while current_future and not current_future.done():
+                        if not sys.stdin.isatty():
+                            current_future.result()
+                            break
+
+                        readable, _, _ = select.select([sys.stdin], [], [], 0.2)
+                        if not readable:
+                            continue
+
+                        latest_instruction = sys.stdin.readline()
+                        if latest_instruction == "":
+                            print("\nExiting...")
+                            sys.exit(0)
+                        latest_instruction = latest_instruction.strip()
+                        if latest_instruction.lower() in ['quit', 'exit', 'q']:
+                            current_cancel_event.set()
+                            agent.engine.request_cancel()
+                            print("Exiting...")
+                            sys.exit(0)
+                        if latest_instruction == "/reset":
+                            current_cancel_event.set()
+                            agent.engine.request_cancel()
+                            conversation_history.clear()
+                            if agent.engine and hasattr(agent.engine, 'terminal_history'):
+                                agent.engine.terminal_history.clear_session()
+                            print("✅ Current task cancelled. Conversation history and terminal logs cleared.")
+                            instruction = read_next_instruction("\nEnter your instruction (or 'quit' to exit, '/reset' to clear context):\n> ")
+                            if instruction.lower() in ['quit', 'exit', 'q']:
+                                print("Exiting...")
+                                sys.exit(0)
+                            if not instruction.strip():
+                                print("No instruction provided. Exiting...")
+                                sys.exit(0)
+                            break
+                        if not latest_instruction:
+                            continue
+
+                        current_cancel_event.set()
+                        agent.engine.request_cancel()
+                        print("\n🔄 Previous task cancelled. Switching to latest instruction...")
+                        current_future, current_cancel_event, _ = start_instruction(latest_instruction)
+
+                    if current_future and current_future.done():
+                        result = current_future.result()
+                        if result == 0:
+                            print("\n✓ Task completed successfully")
+                        else:
+                            print("\n✗ Task failed or was cancelled")
+
+                        if agent.engine and hasattr(agent.engine, 'terminal_history'):
+                            last_output = agent.engine.terminal_history.get_last_command_output()
+                            if last_output:
+                                conversation_history.add_message("assistant", last_output)
+
+                        instruction = read_next_instruction("\nEnter your instruction (or 'quit' to exit, '/reset' to clear context):\n> ")
+                        if instruction.lower() in ['quit', 'exit', 'q']:
+                            print("Exiting...")
+                            sys.exit(0)
+                        if not instruction.strip():
+                            print("No instruction provided. Exiting...")
+                            sys.exit(0)
+            finally:
+                if current_cancel_event:
+                    current_cancel_event.set()
+                agent.engine.request_cancel()
+                executor.shutdown(wait=False, cancel_futures=True)
             
     except ImportError as e:
         print(f"Import error: {e}")

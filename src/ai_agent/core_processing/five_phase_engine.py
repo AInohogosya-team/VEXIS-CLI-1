@@ -11,6 +11,7 @@ Phase 5: Summary Generation and Display
 import re
 import time
 import platform
+import threading
 from typing import Optional, Dict, Any, List, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
@@ -21,6 +22,10 @@ from ..external_integration.telegram_bot import TelegramBotManager, Conversation
 from ..utils.exceptions import ExecutionError, ValidationError
 from ..utils.logger import get_logger
 from .terminal_history import TerminalHistory, get_terminal_history, TerminalEntryType
+
+
+class PipelineCancelledError(Exception):
+    """Raised when a newer user request cancels the active pipeline."""
 
 
 class PipelinePhase(Enum):
@@ -54,6 +59,8 @@ class PipelineContext:
     conversation_history: Optional[ConversationHistory] = None
     telegram_mode: bool = False
     telegram_user_id: Optional[int] = None
+    cancel_event: Optional[threading.Event] = None
+    cancelled: bool = False
 
 
 class FivePhaseEngine:
@@ -89,11 +96,22 @@ class FivePhaseEngine:
         self.command_timeout = self.config.get("command_timeout", 30)
         self.task_timeout = self.config.get("task_timeout", 300)
         self.enable_phase2_summarization = self.config.get("enable_phase2_summarization", True)
+        self._active_cancel_event: Optional[threading.Event] = None
+        self._cancel_lock = threading.Lock()
         
         self.logger.info("5-Phase Pipeline Engine initialized")
     
+    def request_cancel(self) -> None:
+        """Request cancellation of the active pipeline and foreground command."""
+        with self._cancel_lock:
+            if self._active_cancel_event:
+                self._active_cancel_event.set()
+        if hasattr(self.terminal_history, "cancel_current_command"):
+            self.terminal_history.cancel_current_command()
+
     def execute_instruction(self, user_prompt: str, conversation_history: Optional[ConversationHistory] = None,
-                       telegram_mode: bool = False, telegram_user_id: Optional[int] = None) -> PipelineContext:
+                       telegram_mode: bool = False, telegram_user_id: Optional[int] = None,
+                       cancel_event: Optional[threading.Event] = None) -> PipelineContext:
         """
         Execute user instruction through the 5-phase pipeline
         
@@ -114,13 +132,17 @@ class FivePhaseEngine:
             conversation_history=conversation_history,
             telegram_mode=telegram_mode,
             telegram_user_id=telegram_user_id,
+            cancel_event=cancel_event or threading.Event(),
             metadata={"os_info": self._get_os_info()}
         )
         
         # Store current context for callbacks
         self._current_context = context
+        with self._cancel_lock:
+            self._active_cancel_event = context.cancel_event
         
         try:
+            self._raise_if_cancelled(context)
             # Phase 1: Command Suggestion
             if not self._run_phase1(context):
                 context.current_phase = PipelinePhase.FAILED
@@ -168,6 +190,7 @@ class FivePhaseEngine:
 
                         return context
                 
+                self._raise_if_cancelled(context)
                 # Phase 2: Command Extraction
                 if not self._run_phase2(context):
                     context.current_phase = PipelinePhase.FAILED
@@ -186,6 +209,7 @@ class FivePhaseEngine:
                     
                     return context
                 
+                self._raise_if_cancelled(context)
                 # Phase 3: Command Execution
                 if not self._run_phase3(context):
                     context.current_phase = PipelinePhase.FAILED
@@ -204,9 +228,11 @@ class FivePhaseEngine:
                     
                     return context
                 
+                self._raise_if_cancelled(context)
                 # Phase 4: Log Evaluation
                 should_continue = self._run_phase4(context)
                 
+                self._raise_if_cancelled(context)
                 if not should_continue:
                     # No code block in Phase 4 output - task is successful
                     break
@@ -217,6 +243,7 @@ class FivePhaseEngine:
             if context.iteration_count >= context.max_iterations:
                 self.logger.warning("Maximum iterations reached, forcing completion")
             
+            self._raise_if_cancelled(context)
             # Phase 5: Summary Generation
             if not self._run_phase5(context):
                 context.current_phase = PipelinePhase.FAILED
@@ -235,6 +262,7 @@ class FivePhaseEngine:
                 
                 return context
             
+            self._raise_if_cancelled(context)
             context.current_phase = PipelinePhase.COMPLETED
             context.end_time = time.time()
             
@@ -244,6 +272,13 @@ class FivePhaseEngine:
             
             return context
             
+        except PipelineCancelledError as e:
+            self.logger.info(f"5-Phase Pipeline execution cancelled: {e}")
+            context.current_phase = PipelinePhase.FAILED
+            context.error = str(e)
+            context.cancelled = True
+            context.end_time = time.time()
+            return context
         except Exception as e:
             self.logger.error(f"5-Phase Pipeline execution failed: {e}")
             context.current_phase = PipelinePhase.FAILED
@@ -262,7 +297,16 @@ class FivePhaseEngine:
                     self.logger.warning(f"Failed to send error notification to Telegram: {telegram_error}")
             
             return context
+        finally:
+            with self._cancel_lock:
+                if self._active_cancel_event is context.cancel_event:
+                    self._active_cancel_event = None
     
+    def _raise_if_cancelled(self, context: PipelineContext) -> None:
+        """Abort this pipeline if a newer user prompt has superseded it."""
+        if context.cancel_event and context.cancel_event.is_set():
+            raise PipelineCancelledError("Task cancelled because a newer user request was received")
+
     def _run_phase1(self, context: PipelineContext) -> bool:
         """
         Phase 1: Command Suggestion
@@ -300,6 +344,7 @@ class FivePhaseEngine:
             
             # Run model
             response = self.model_runner.run_model(request)
+            self._raise_if_cancelled(context)
             
             if not response.success:
                 self.logger.error(f"Phase 1 model execution failed: {response.error}")
@@ -311,6 +356,8 @@ class FivePhaseEngine:
             
             return True
             
+        except PipelineCancelledError:
+            raise
         except Exception as e:
             self.logger.error(f"Phase 1 failed: {e}")
             return False
@@ -358,6 +405,7 @@ class FivePhaseEngine:
                 
                 # Run model
                 response = self.model_runner.run_model(request)
+                self._raise_if_cancelled(context)
                 
                 if not response.success:
                     self.logger.error(f"Phase 2 model execution failed: {response.error}")
@@ -380,6 +428,8 @@ class FivePhaseEngine:
                                 context.telegram_user_id,
                                 f"🔧 Commands extracted:\n```\n{commands}\n```"
                             )
+                        except PipelineCancelledError:
+                            raise
                         except Exception as e:
                             # Log error but don't fail Phase 2
                             self.logger.warning(f"Failed to send extracted commands to Telegram: {e}")
@@ -391,6 +441,8 @@ class FivePhaseEngine:
                         continue
                     return False
                     
+            except PipelineCancelledError:
+                raise
             except Exception as e:
                 self.logger.error(f"Phase 2 failed on attempt {attempt + 1}: {e}")
                 if attempt < max_retries - 1:
@@ -425,6 +477,7 @@ class FivePhaseEngine:
             )
             
             response = self.model_runner.run_model(request)
+            self._raise_if_cancelled(context)
             
             if not response.success:
                 self.logger.error(f"Input summarization failed: {response.error}")
@@ -441,6 +494,8 @@ class FivePhaseEngine:
                         context.telegram_user_id,
                         f"📝 Summary: {context.input_summary}"
                     )
+                except PipelineCancelledError:
+                    raise
                 except Exception as e:
                     # Log error but don't fail summarization
                     self.logger.warning(f"Failed to send input summary to Telegram: {e}")
@@ -450,6 +505,8 @@ class FivePhaseEngine:
             
             return True
             
+        except PipelineCancelledError:
+            raise
         except Exception as e:
             self.logger.error(f"Input summarization failed: {e}")
             return False
@@ -485,8 +542,10 @@ class FivePhaseEngine:
             # Execute all commands in a single batch (maintaining same terminal session)
             result = self.terminal_history.execute_commands_batch(
                 commands, 
-                timeout=self.command_timeout
+                timeout=self.command_timeout,
+                cancel_event=context.cancel_event
             )
+            self._raise_if_cancelled(context)
             
             # Log result
             if result.get("success"):
@@ -503,6 +562,8 @@ class FivePhaseEngine:
                             f"⏱️ **Timeout Error**\n\nCommand execution timed out after {self.command_timeout} seconds.\n\nThe task took too long to complete and was terminated."
                         )
                         self.logger.info("Sent timeout notification to Telegram")
+                    except PipelineCancelledError:
+                        raise
                     except Exception as e:
                         self.logger.warning(f"Failed to send timeout notification to Telegram: {e}")
             
@@ -512,6 +573,8 @@ class FivePhaseEngine:
             self.logger.info("Phase 3 completed successfully")
             return True
             
+        except PipelineCancelledError:
+            raise
         except Exception as e:
             self.logger.error(f"Phase 3 failed: {e}")
             return False
@@ -554,6 +617,7 @@ class FivePhaseEngine:
             
             # Run model
             response = self.model_runner.run_model(request)
+            self._raise_if_cancelled(context)
             
             if not response.success:
                 self.logger.error(f"Phase 4 model execution failed: {response.error}")
@@ -573,6 +637,8 @@ class FivePhaseEngine:
             # If code block is NOT present, the task succeeded - proceed to Phase 5
             return has_code_block
             
+        except PipelineCancelledError:
+            raise
         except Exception as e:
             self.logger.error(f"Phase 4 failed: {e}")
             # On error, proceed to Phase 5
@@ -618,6 +684,7 @@ class FivePhaseEngine:
                 
                 # Run model
                 response = self.model_runner.run_model(request)
+                self._raise_if_cancelled(context)
                 
                 if not response.success:
                     self.logger.error(f"Phase 5 model execution failed: {response.error}")
@@ -652,6 +719,8 @@ class FivePhaseEngine:
                         continue
                     return False
                     
+            except PipelineCancelledError:
+                raise
             except Exception as e:
                 self.logger.error(f"Phase 5 failed on attempt {attempt + 1}: {e}")
                 if attempt < max_retries - 1:
@@ -888,6 +957,8 @@ class FivePhaseEngine:
             
             return os_info
             
+        except PipelineCancelledError:
+            raise
         except Exception as e:
             self.logger.warning(f"Failed to get OS info: {e}")
             return "Unknown OS"
