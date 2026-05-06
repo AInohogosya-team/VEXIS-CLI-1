@@ -596,20 +596,12 @@ class FivePhaseEngine:
             # Get full terminal log
             full_terminal_log = self.terminal_history.display_terminal_log(max_entries=1000)
             
-            # Add conversation history to context if available (Telegram or Normal mode)
-            conversation_history_text = ""
-            if context.conversation_history:
-                conversation_history_text = "\n\n" + context.conversation_history.format_for_prompt()
-                self.logger.info("Including conversation history in Phase 4 prompt")
-            
             # Create request for Phase 4
             request = ModelRequest(
                 task_type=TaskType.PHASE4_LOG_EVALUATION,
                 prompt=full_terminal_log,
                 context={
                     "user_prompt": context.user_prompt,
-                    "full_terminal_log_so_far": full_terminal_log,
-                    "conversation_history": conversation_history_text,
                 },
                 max_tokens=4000,
                 temperature=0.5
@@ -663,20 +655,12 @@ class FivePhaseEngine:
                 # Get full terminal log
                 full_terminal_log = self.terminal_history.display_terminal_log(max_entries=1000)
                 
-                # Add conversation history to context if available (Telegram or Normal mode)
-                conversation_history_text = ""
-                if context.conversation_history:
-                    conversation_history_text = "\n\n" + context.conversation_history.format_for_prompt()
-                    self.logger.info("Including conversation history in Phase 5 prompt")
-                
                 # Create request for Phase 5
                 request = ModelRequest(
                     task_type=TaskType.PHASE5_SUMMARY_GENERATION,
                     prompt=full_terminal_log,
                     context={
                         "user_prompt": context.user_prompt,
-                        "full_terminal_log": full_terminal_log,
-                        "conversation_history": conversation_history_text,
                     },
                     max_tokens=4000,
                     temperature=0.7
