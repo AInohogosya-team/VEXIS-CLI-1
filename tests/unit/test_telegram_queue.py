@@ -58,3 +58,27 @@ def test_handle_message_cancels_overlapping_user_task_and_starts_latest():
     assert update.message.reply_text.await_args_list[1].args[0] == "⏳ Processing your request..."
     assert running_cancel_event.is_set()
     running_task.cancel.assert_called_once()
+
+
+def test_restart_command_acknowledges_and_invokes_restart_callback():
+    bot = TelegramBotManager(bot_token="dummy-token")
+    user_id = 123
+    running_task = Mock()
+    running_task.done.return_value = False
+    running_cancel_event = threading.Event()
+    bot._current_tasks[user_id] = RunningTelegramTask(task=running_task, cancel_event=running_cancel_event)
+    restart_callback = Mock()
+    bot.set_restart_callback(restart_callback)
+
+    update = Mock()
+    update.effective_user.id = user_id
+    update.message.reply_text = AsyncMock()
+
+    asyncio.run(bot.restart_command(update, Mock()))
+
+    update.message.reply_text.assert_awaited_once_with(
+        "🔄 Restarting VEXIS-CLI with the same provider, model, and API settings..."
+    )
+    assert running_cancel_event.is_set()
+    running_task.cancel.assert_called_once()
+    restart_callback.assert_called_once_with(user_id)

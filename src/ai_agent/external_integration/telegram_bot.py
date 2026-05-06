@@ -192,6 +192,7 @@ class TelegramBotManager:
         
         # Callback for processing messages
         self.message_callback: Optional[Callable[[str, int], str]] = None
+        self.restart_callback: Optional[Callable[[int], None]] = None
         
         # Track running tasks per user so a newer prompt can supersede old work
         self._current_tasks: Dict[int, RunningTelegramTask] = {}
@@ -221,6 +222,10 @@ class TelegramBotManager:
     def set_message_callback(self, callback: Callable[[str, int], str]):
         """Set the callback function for processing messages"""
         self.message_callback = callback
+
+    def set_restart_callback(self, callback: Callable[[int], None]):
+        """Set the callback function used by the /restart command."""
+        self.restart_callback = callback
     
     def get_conversation_history(self, user_id: int) -> ConversationHistory:
         """Get or create conversation history for a user"""
@@ -253,6 +258,7 @@ class TelegramBotManager:
             "🤖 VEXIS-CLI AI Agent\n\n"
             "Send me commands and I'll execute them on your computer.\n"
             "Use /reset to clear conversation history.\n"
+            "Use /restart to restart while keeping current settings.\n"
             "Use /help for more information."
         )
     
@@ -278,6 +284,25 @@ class TelegramBotManager:
         await update.message.reply_text("✅ Conversation history and terminal logs cleared.")
     
     @retry_on_network_error(max_retries=10, initial_delay=1.0, backoff_factor=2.0)
+    async def restart_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /restart command"""
+        if not update.effective_user or not update.message:
+            return
+
+        user_id = update.effective_user.id
+
+        if not self._is_user_allowed(user_id):
+            return
+
+        await self._cancel_user_task(user_id)
+        await update.message.reply_text("🔄 Restarting VEXIS-CLI with the same provider, model, and API settings...")
+
+        if self.restart_callback:
+            self.restart_callback(user_id)
+        else:
+            await update.message.reply_text("⚠️ Restart is not configured for this bot session.")
+
+    @retry_on_network_error(max_retries=10, initial_delay=1.0, backoff_factor=2.0)
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /help command"""
         if not update.effective_user or not update.message:
@@ -293,6 +318,7 @@ class TelegramBotManager:
             "Commands:\n"
             "/start - Start the bot\n"
             "/reset - Clear conversation history\n"
+            "/restart - Restart while keeping current provider/model/API settings\n"
             "/help - Show this help message\n\n"
             "Just send any instruction and I'll execute it on your computer!"
         )
@@ -335,9 +361,12 @@ class TelegramBotManager:
         
         user_message = update.message.text
         
-        # Check for /reset command
+        # Check for slash commands that may arrive via text handlers in some clients
         if user_message.strip() == "/reset":
             await self.reset_command(update, context)
+            return
+        if user_message.strip() == "/restart":
+            await self.restart_command(update, context)
             return
         
         # New prompts supersede older work. Signal the old pipeline to stop and
@@ -567,6 +596,7 @@ class TelegramBotManager:
                 # Add handlers
                 self.application.add_handler(CommandHandler("start", self.start_command))
                 self.application.add_handler(CommandHandler("reset", self.reset_command))
+                self.application.add_handler(CommandHandler("restart", self.restart_command))
                 self.application.add_handler(CommandHandler("help", self.help_command))
                 self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
 
