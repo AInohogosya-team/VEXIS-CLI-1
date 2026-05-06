@@ -6,7 +6,7 @@ Handles Telegram bot communication and message management
 import asyncio
 import threading
 import time
-from typing import Optional, Dict, Any, List, Callable, Tuple
+from typing import Optional, Dict, Any, List, Callable
 from dataclasses import dataclass, field
 from enum import Enum
 import json
@@ -148,6 +148,16 @@ class ConversationHistory:
         return formatted
 
 
+@dataclass
+class QueuedTelegramMessage:
+    """Telegram message waiting to be sent from the queue processor."""
+
+    chat_id: int
+    message: str
+    attempts: int = 0
+    next_attempt_at: float = 0.0
+
+
 class TelegramBotManager:
     """
     Manages Telegram bot integration for AI agent
@@ -172,7 +182,7 @@ class TelegramBotManager:
         # Callback for processing messages
         self.message_callback: Optional[Callable[[str, int], str]] = None
         
-        # Track running tasks per user for cancellation
+        # Track running tasks per user to prevent overlapping pipeline runs
         self._current_tasks: Dict[int, asyncio.Task] = {}
         self._task_lock = asyncio.Lock()
         
@@ -184,8 +194,10 @@ class TelegramBotManager:
         self._should_restart = True
         
         # Message queue for sending messages from synchronous context
-        self.message_queue: List[Tuple[int, str]] = []
+        self.message_queue: List[QueuedTelegramMessage] = []
         self._queue_lock = threading.Lock()
+        self._max_queue_send_attempts = 5
+        self._queue_retry_delay = 2.0
         
         # Background thread for processing message queue
         self.queue_processor_thread: Optional[threading.Thread] = None
@@ -299,7 +311,7 @@ class TelegramBotManager:
     
     @retry_on_network_error(max_retries=10, initial_delay=1.0, backoff_factor=2.0)
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle incoming messages - cancels previous task and starts new one immediately"""
+        """Handle incoming messages without letting earlier background work block the bot."""
         if not update.effective_user or not update.message:
             return
 
@@ -319,8 +331,18 @@ class TelegramBotManager:
             await self.reset_command(update, context)
             return
         
-        # Cancel any running task for this user immediately
-        await self._cancel_user_task(user_id)
+        # A sync executor task cannot be force-stopped once the AI pipeline has
+        # entered provider/terminal code. Starting another pipeline against the
+        # shared engine at the same time can corrupt state and make Telegram look
+        # unresponsive, so keep the bot responsive by rejecting overlapping work.
+        async with self._task_lock:
+            running_task = self._current_tasks.get(user_id)
+            if running_task and not running_task.done():
+                await update.message.reply_text(
+                    "⏳ A previous request is still running. Please wait for it to finish, "
+                    "then send your next message."
+                )
+                return
         
         # Add user message to conversation history
         history = self.get_conversation_history(user_id)
@@ -359,8 +381,9 @@ class TelegramBotManager:
                 # Update processing message with response
                 await processing_msg.edit_text(response)
                 
-                # Process any queued messages (e.g., Phase 2 summaries)
-                await self.process_message_queue()
+                # Queued phase messages are sent by the background queue
+                # processor. Do not drain the queue here: doing so can keep this
+                # handler alive indefinitely if Telegram is temporarily down.
             else:
                 await processing_msg.edit_text("⚠️ Message callback not set. Bot not properly configured.")
                 
@@ -408,7 +431,7 @@ class TelegramBotManager:
         
         return f"{beginning}{omitted_tag}{end}"
     
-    @retry_on_network_error(max_retries=10, initial_delay=1.0, backoff_factor=2.0)
+    @retry_on_network_error(max_retries=2, initial_delay=0.5, backoff_factor=2.0)
     async def send_message(self, chat_id: int, message: str):
         """Send a message to a specific chat"""
         if not self.application:
@@ -429,26 +452,58 @@ class TelegramBotManager:
         This method is synchronous and can be called from any context.
         """
         with self._queue_lock:
-            self.message_queue.append((chat_id, message))
+            self.message_queue.append(QueuedTelegramMessage(chat_id=chat_id, message=message))
         self.logger.info(f"Message queued for user {chat_id}")
     
     async def process_message_queue(self):
-        """Process queued messages and send them"""
-        while self._should_restart:
+        """Process currently-sendable queued messages once and return.
+
+        This method is intentionally bounded. The old implementation retried
+        forever inside request handling, which could leave a user task marked as
+        running and cause later Telegram messages to appear ignored.
+        """
+        for queued_message in self._pop_sendable_messages():
+            await self._send_queued_message(queued_message)
+
+    def _pop_sendable_messages(self) -> List[QueuedTelegramMessage]:
+        """Pop messages that are due to be sent, leaving delayed retries queued."""
+        now = time.time()
+        sendable: List[QueuedTelegramMessage] = []
+        delayed: List[QueuedTelegramMessage] = []
+
+        with self._queue_lock:
+            while self.message_queue:
+                queued_message = self.message_queue.pop(0)
+                if queued_message.next_attempt_at <= now:
+                    sendable.append(queued_message)
+                else:
+                    delayed.append(queued_message)
+
+            self.message_queue = delayed + self.message_queue
+
+        return sendable
+
+    async def _send_queued_message(self, queued_message: QueuedTelegramMessage):
+        """Send a queued message once, re-queueing with a bounded retry budget."""
+        try:
+            await self.send_message(queued_message.chat_id, queued_message.message)
+            self.logger.info(f"Sent queued message to user {queued_message.chat_id}")
+        except Exception as e:
+            queued_message.attempts += 1
+            if queued_message.attempts >= self._max_queue_send_attempts:
+                self.logger.error(
+                    f"Dropping queued message to user {queued_message.chat_id} "
+                    f"after {queued_message.attempts} failed attempts: {e}"
+                )
+                return
+
+            queued_message.next_attempt_at = time.time() + (self._queue_retry_delay * queued_message.attempts)
+            self.logger.warning(
+                f"Failed to send queued message to user {queued_message.chat_id}: {e}. "
+                f"Retry {queued_message.attempts}/{self._max_queue_send_attempts} scheduled."
+            )
             with self._queue_lock:
-                if not self.message_queue:
-                    break
-                chat_id, message = self.message_queue.pop(0)
-            try:
-                await self.send_message(chat_id, message)
-                self.logger.info(f"Sent queued message to user {chat_id}")
-            except Exception as e:
-                self.logger.error(f"Failed to send queued message to user {chat_id}: {e}")
-                # Re-queue the message for retry (at the end of the queue)
-                with self._queue_lock:
-                    self.message_queue.append((chat_id, message))
-                # Add a small delay before retrying to avoid tight loop
-                await asyncio.sleep(1)
+                self.message_queue.append(queued_message)
     
     def _start_queue_processor(self):
         """Start background thread to process message queue"""
@@ -458,27 +513,12 @@ class TelegramBotManager:
             self.queue_processor_running = True
             
             while self.queue_processor_running:
-                with self._queue_lock:
-                    has_messages = bool(self.message_queue)
-
-                if has_messages and self.application:
+                if self.application:
                     try:
-                        # Copy the queue to avoid concurrent modification
-                        with self._queue_lock:
-                            messages_to_send = list(self.message_queue)
-                            self.message_queue.clear()
-                        
-                        for chat_id, message in messages_to_send:
-                            try:
-                                loop.run_until_complete(self.send_message(chat_id, message))
-                                self.logger.info(f"Sent queued message to user {chat_id}")
-                            except Exception as e:
-                                self.logger.error(f"Failed to send queued message to user {chat_id}: {e}")
-                                # Re-queue the message for retry
-                                with self._queue_lock:
-                                    self.message_queue.append((chat_id, message))
-                                # Add delay before continuing to next message
-                                time.sleep(1)
+                        messages_to_send = self._pop_sendable_messages()
+
+                        for queued_message in messages_to_send:
+                            loop.run_until_complete(self._send_queued_message(queued_message))
                     except Exception as e:
                         self.logger.error(f"Error in queue processor: {e}")
                         # Add delay before retrying the entire batch
