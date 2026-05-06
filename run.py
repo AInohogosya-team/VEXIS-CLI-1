@@ -23,6 +23,156 @@ from typing import Optional
 # Global constants
 VENV_DIR = "venv"
 VENV_RESTART_FLAG = "--__venv_restarted__"
+USER_RESTART_FLAG = "--__user_restarted__"
+RESTART_ENV_PREFIX = "VEXIS_RESTART_"
+RESTART_MODE_ENV = f"{RESTART_ENV_PREFIX}MODE"
+RESTART_PROVIDER_ENV = f"{RESTART_ENV_PREFIX}PROVIDER"
+RESTART_MODEL_ENV = f"{RESTART_ENV_PREFIX}MODEL"
+RESTART_API_KEY_ENV = f"{RESTART_ENV_PREFIX}API_KEY"
+
+PROVIDER_API_KEY_ENV_VARS = {
+    "google": "GOOGLE_API_KEY",
+    "groq": "GROQ_API_KEY",
+    "openai": "OPENAI_API_KEY",
+    "anthropic": "ANTHROPIC_API_KEY",
+    "xai": "XAI_API_KEY",
+    "meta": "META_API_KEY",
+    "mistral": "MISTRAL_API_KEY",
+    "microsoft": "AZURE_API_KEY",
+    "azure": "AZURE_API_KEY",
+    "amazon": "AWS_ACCESS_KEY_ID",
+    "cohere": "COHERE_API_KEY",
+    "deepseek": "DEEPSEEK_API_KEY",
+    "together": "TOGETHER_API_KEY",
+    "minimax": "MINIMAX_API_KEY",
+    "zhipuai": "ZHIPUAI_API_KEY",
+    "openrouter": "OPENROUTER_API_KEY",
+}
+
+
+
+def _get_api_key_for_provider(provider: Optional[str]) -> Optional[str]:
+    """Return the active API key for a provider without prompting the user."""
+    if not provider or provider == "ollama":
+        return None
+
+    try:
+        from ai_agent.utils.settings_manager import get_settings_manager
+
+        settings_manager = get_settings_manager()
+        try:
+            api_key = settings_manager.get_api_key(provider)
+            if api_key:
+                return api_key
+        except Exception:
+            pass
+
+        method_name = f"get_{provider}_api_key"
+        if hasattr(settings_manager, method_name):
+            api_key = getattr(settings_manager, method_name)()
+            if api_key:
+                return api_key
+
+        if provider == "microsoft" and hasattr(settings_manager, "get_microsoft_api_key"):
+            api_key = settings_manager.get_microsoft_api_key()
+            if api_key:
+                return api_key
+
+        if provider == "amazon" and hasattr(settings_manager, "get_amazon_access_key"):
+            api_key = settings_manager.get_amazon_access_key()
+            if api_key:
+                return api_key
+    except Exception:
+        pass
+
+    env_var = PROVIDER_API_KEY_ENV_VARS.get(provider)
+    return os.getenv(env_var) if env_var else None
+
+
+def _restore_restart_settings_from_env():
+    """Hydrate in-memory settings from /restart environment overrides."""
+    provider = os.getenv(RESTART_PROVIDER_ENV)
+    model = os.getenv(RESTART_MODEL_ENV)
+    api_key = os.getenv(RESTART_API_KEY_ENV)
+
+    if not provider:
+        return
+
+    try:
+        from ai_agent.utils.settings_manager import get_settings_manager
+
+        settings_manager = get_settings_manager()
+        try:
+            settings_manager.set_preferred_provider(provider)
+        except Exception:
+            pass
+
+        if model:
+            try:
+                settings_manager.set_model(provider, model)
+            except Exception:
+                method_name = f"set_{provider}_model"
+                if hasattr(settings_manager, method_name):
+                    getattr(settings_manager, method_name)(model)
+                elif provider == "microsoft" and hasattr(settings_manager, "set_microsoft_model"):
+                    settings_manager.set_microsoft_model(model)
+
+        if api_key:
+            try:
+                settings_manager.set_api_key(provider, api_key)
+            except Exception:
+                method_name = f"set_{provider}_api_key"
+                if hasattr(settings_manager, method_name):
+                    getattr(settings_manager, method_name)(api_key)
+                elif provider == "microsoft" and hasattr(settings_manager, "set_microsoft_api_key"):
+                    settings_manager.set_microsoft_api_key(api_key)
+
+            env_var = PROVIDER_API_KEY_ENV_VARS.get(provider)
+            if env_var:
+                os.environ[env_var] = api_key
+            if provider == "google":
+                os.environ.setdefault("GEMINI_API_KEY", api_key)
+    except Exception as e:
+        print(f"⚠️ Could not restore restart settings: {e}")
+
+
+def restart_with_current_settings(
+    selected_mode: str,
+    selected_provider: Optional[str],
+    selected_model: Optional[str],
+    debug_mode: bool = False,
+    max_iterations: Optional[int] = None,
+):
+    """Replace the current process while preserving runtime provider/model/API settings."""
+    env = os.environ
+    env[RESTART_MODE_ENV] = selected_mode
+    if selected_provider:
+        env[RESTART_PROVIDER_ENV] = selected_provider
+    else:
+        env.pop(RESTART_PROVIDER_ENV, None)
+    if selected_model:
+        env[RESTART_MODEL_ENV] = selected_model
+    else:
+        env.pop(RESTART_MODEL_ENV, None)
+
+    api_key = _get_api_key_for_provider(selected_provider)
+    if api_key:
+        env[RESTART_API_KEY_ENV] = api_key
+        api_env_var = PROVIDER_API_KEY_ENV_VARS.get(selected_provider or "")
+        if api_env_var:
+            env[api_env_var] = api_key
+        if selected_provider == "google":
+            env.setdefault("GEMINI_API_KEY", api_key)
+    else:
+        env.pop(RESTART_API_KEY_ENV, None)
+
+    new_args = [sys.executable, str(__file__), USER_RESTART_FLAG, "--no-prompt"]
+    if debug_mode:
+        new_args.append("--debug")
+    if max_iterations is not None:
+        new_args.extend(["--max-iterations", str(max_iterations)])
+
+    os.execv(sys.executable, new_args)
 
 def is_in_virtual_environment():
     """Check if currently running in a virtual environment"""
@@ -1793,6 +1943,10 @@ def main():
     sys.path.insert(0, str(src_dir))
     
     # Validate arguments - allow running without instruction for interactive/Telegram modes
+    _restore_restart_settings_from_env()
+    if USER_RESTART_FLAG in sys.argv:
+        sys.argv.remove(USER_RESTART_FLAG)
+        print("✓ Restarted with previous provider, model, and API settings")
     
     # Show help
     if "--help" in sys.argv:
@@ -1817,7 +1971,19 @@ def main():
         sys.exit(0)
     
     # Filter out flags to get the actual instruction
-    instruction_args = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
+    instruction_args = []
+    skip_next_arg = False
+    flags_with_values = {"--max-iterations"}
+    for arg in sys.argv[1:]:
+        if skip_next_arg:
+            skip_next_arg = False
+            continue
+        if arg in flags_with_values:
+            skip_next_arg = True
+            continue
+        if arg.startswith("--"):
+            continue
+        instruction_args.append(arg)
     instruction = " ".join(instruction_args) if instruction_args else None
     
     # Allow SDK management commands without instruction
@@ -1855,26 +2021,31 @@ def main():
             print(f"❌ Failed to check SDK status: {e}")
         sys.exit(0)
     
-    # Mode selection - check config.yaml first, then prompt if needed
-    selected_mode = None
+    # Mode selection - /restart override, config.yaml, then prompt if needed
+    selected_mode = os.getenv(RESTART_MODE_ENV)
+    if selected_mode in ["normal", "telegram"]:
+        print(f"\nUsing restart mode: {selected_mode.upper()}")
+    else:
+        selected_mode = None
     
     # Try to get mode from config.yaml
-    try:
-        from ai_agent.utils.config import ConfigManager
-        config_path = current_dir / "config.yaml"
-        # Create a new config manager with the specific path to avoid singleton cache
-        config_manager = ConfigManager(str(config_path)) if config_path.exists() else None
-        if config_manager:
-            config = config_manager.load_config()
-            if hasattr(config, 'execution') and hasattr(config.execution, 'mode'):
-                config_mode = config.execution.mode
-                if config_mode in ["normal", "telegram"]:
-                    selected_mode = config_mode
-                    print(f"\nUsing configured mode from config.yaml: {selected_mode.upper()}")
-                elif config_mode != "auto":
-                    print(f"⚠️ Invalid mode in config.yaml: {config_mode}. Using auto mode.")
-    except Exception as e:
-        print(f"⚠️ Could not load config for mode selection: {e}")
+    if selected_mode is None:
+        try:
+            from ai_agent.utils.config import ConfigManager
+            config_path = current_dir / "config.yaml"
+            # Create a new config manager with the specific path to avoid singleton cache
+            config_manager = ConfigManager(str(config_path)) if config_path.exists() else None
+            if config_manager:
+                config = config_manager.load_config()
+                if hasattr(config, 'execution') and hasattr(config.execution, 'mode'):
+                    config_mode = config.execution.mode
+                    if config_mode in ["normal", "telegram"]:
+                        selected_mode = config_mode
+                        print(f"\nUsing configured mode from config.yaml: {selected_mode.upper()}")
+                    elif config_mode != "auto":
+                        print(f"⚠️ Invalid mode in config.yaml: {config_mode}. Using auto mode.")
+        except Exception as e:
+            print(f"⚠️ Could not load config for mode selection: {e}")
     
     # If mode not set in config or set to "auto", prompt user (unless --no-prompt)
     if selected_mode is None:
@@ -1891,10 +2062,14 @@ def main():
             print(f"\nUsing default mode: NORMAL")
     
     # Model selection - only prompt if not using --no-prompt flag
-    selected_provider = None
-    selected_model = None
+    selected_provider = os.getenv(RESTART_PROVIDER_ENV)
+    selected_model = os.getenv(RESTART_MODEL_ENV)
+    if selected_provider:
+        print(f"\nUsing restart provider: {selected_provider}")
+        if selected_model:
+            print(f"Using restart model: {selected_model}")
     
-    if "--no-prompt" not in sys.argv:
+    if selected_provider is None and "--no-prompt" not in sys.argv:
         result = select_model_provider()
         if isinstance(result, tuple) and len(result) == 2:
             selected_provider, selected_model = result
@@ -1903,7 +2078,7 @@ def main():
         print(f"\nUsing provider: {selected_provider}")
         if selected_model:
             print(f"Using model: {selected_model}")
-    else:
+    elif selected_provider is None:
         # Try to get provider from config.yaml first
         try:
             from ai_agent.utils.config import ConfigManager
@@ -1960,12 +2135,16 @@ def main():
         print("  Enter your instruction to execute")
         print("  Type 'quit', 'exit', or 'q' to exit")
         print("  Type '/reset' to clear conversation history")
+        print("  Type '/restart' to restart while keeping current settings")
         print("\nEnter your instruction:")
         try:
             instruction = input("> ")
             if instruction.lower() in ['quit', 'exit', 'q']:
                 print("Exiting...")
                 sys.exit(0)
+            if instruction.strip() == "/restart":
+                print("🔄 Restarting with current settings...")
+                restart_with_current_settings(selected_mode, selected_provider, selected_model, debug_mode, max_iterations=None)
             if not instruction.strip():
                 print("No instruction provided. Exiting...")
                 sys.exit(0)
@@ -1973,6 +2152,9 @@ def main():
             print("\nExiting...")
             sys.exit(0)
     else:
+        if instruction.strip() == "/restart":
+            print("🔄 Restarting with current settings...")
+            restart_with_current_settings(selected_mode, selected_provider, selected_model, debug_mode, max_iterations=None)
         print(f"\nAI Agent executing: {instruction}")
     
     max_iterations = 500
@@ -2055,6 +2237,12 @@ def main():
                     return "Task completed (no summary available)"
             
             telegram_bot.set_message_callback(process_telegram_message)
+
+            def process_telegram_restart(user_id: int):
+                """Restart from Telegram after acknowledging the command."""
+                restart_with_current_settings(selected_mode, selected_provider, selected_model, debug_mode, max_iterations)
+
+            telegram_bot.set_restart_callback(process_telegram_restart)
             
             # Start the bot (blocking)
             try:
@@ -2103,16 +2291,22 @@ def main():
 
             try:
                 while True:
+                    if instruction.strip() == "/restart":
+                        print("🔄 Restarting with current settings...")
+                        restart_with_current_settings(selected_mode, selected_provider, selected_model, debug_mode, max_iterations)
                     if instruction.strip() == "/reset":
                         conversation_history.clear()
                         if agent.engine and hasattr(agent.engine, 'terminal_history'):
                             agent.engine.terminal_history.clear_session()
                             print("✅ Terminal logs cleared.")
                         print("✅ Conversation history and terminal logs cleared.")
-                        instruction = read_next_instruction("\nEnter your instruction (or 'quit' to exit, '/reset' to clear context):\n> ")
+                        instruction = read_next_instruction("\nEnter your instruction (or 'quit' to exit, '/reset' to clear context, '/restart' to restart):\n> ")
                         if instruction.lower() in ['quit', 'exit', 'q']:
                             print("Exiting...")
                             sys.exit(0)
+                        if instruction.strip() == "/restart":
+                            print("🔄 Restarting with current settings...")
+                            restart_with_current_settings(selected_mode, selected_provider, selected_model, debug_mode, max_iterations)
                         if not instruction.strip():
                             print("No instruction provided. Exiting...")
                             sys.exit(0)
@@ -2140,6 +2334,11 @@ def main():
                             agent.engine.request_cancel()
                             print("Exiting...")
                             sys.exit(0)
+                        if latest_instruction == "/restart":
+                            current_cancel_event.set()
+                            agent.engine.request_cancel()
+                            print("🔄 Current task cancelled. Restarting with current settings...")
+                            restart_with_current_settings(selected_mode, selected_provider, selected_model, debug_mode, max_iterations)
                         if latest_instruction == "/reset":
                             current_cancel_event.set()
                             agent.engine.request_cancel()
@@ -2147,10 +2346,13 @@ def main():
                             if agent.engine and hasattr(agent.engine, 'terminal_history'):
                                 agent.engine.terminal_history.clear_session()
                             print("✅ Current task cancelled. Conversation history and terminal logs cleared.")
-                            instruction = read_next_instruction("\nEnter your instruction (or 'quit' to exit, '/reset' to clear context):\n> ")
+                            instruction = read_next_instruction("\nEnter your instruction (or 'quit' to exit, '/reset' to clear context, '/restart' to restart):\n> ")
                             if instruction.lower() in ['quit', 'exit', 'q']:
                                 print("Exiting...")
                                 sys.exit(0)
+                            if instruction.strip() == "/restart":
+                                print("🔄 Restarting with current settings...")
+                                restart_with_current_settings(selected_mode, selected_provider, selected_model, debug_mode, max_iterations)
                             if not instruction.strip():
                                 print("No instruction provided. Exiting...")
                                 sys.exit(0)
@@ -2175,10 +2377,13 @@ def main():
                             if last_output:
                                 conversation_history.add_message("assistant", last_output)
 
-                        instruction = read_next_instruction("\nEnter your instruction (or 'quit' to exit, '/reset' to clear context):\n> ")
+                        instruction = read_next_instruction("\nEnter your instruction (or 'quit' to exit, '/reset' to clear context, '/restart' to restart):\n> ")
                         if instruction.lower() in ['quit', 'exit', 'q']:
                             print("Exiting...")
                             sys.exit(0)
+                        if instruction.strip() == "/restart":
+                            print("🔄 Restarting with current settings...")
+                            restart_with_current_settings(selected_mode, selected_provider, selected_model, debug_mode, max_iterations)
                         if not instruction.strip():
                             print("No instruction provided. Exiting...")
                             sys.exit(0)
