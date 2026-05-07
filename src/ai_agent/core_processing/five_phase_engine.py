@@ -99,6 +99,13 @@ class FivePhaseEngine:
         self._active_cancel_event: Optional[threading.Event] = None
         self._cancel_lock = threading.Lock()
         
+        # Initialize timeout storage attributes for /KG command
+        self._last_failed_instruction: Optional[str] = None
+        self._last_failed_conversation_history = None
+        self._last_failed_phase: Optional[PipelinePhase] = None
+        self._last_failed_iteration: Optional[int] = None
+        self._last_failed_terminal_log: Optional[str] = None
+        
         self.logger.info("5-Phase Pipeline Engine initialized")
     
     def request_cancel(self) -> None:
@@ -176,6 +183,13 @@ class FivePhaseEngine:
                         self.logger.error(error_msg)
                         context.current_phase = PipelinePhase.FAILED
                         context.error = error_msg
+
+                        # Store failed instruction and context for /KG command
+                        self._last_failed_instruction = context.user_prompt
+                        self._last_failed_conversation_history = context.conversation_history
+                        self._last_failed_phase = context.current_phase
+                        self._last_failed_iteration = context.iteration_count
+                        self._last_failed_terminal_log = context.terminal_log
 
                         # Send timeout notification via Telegram
                         if context.telegram_mode and self.telegram_bot and context.telegram_user_id:

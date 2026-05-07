@@ -2150,6 +2150,7 @@ def main():
         print("  Type 'quit', 'exit', or 'q' to exit")
         print("  Type '/reset' to clear conversation history")
         print("  Type '/restart' to restart while keeping current settings")
+        print("  Type '/KG' (Keep Going) to resume a task after timeout")
         print("\nEnter your instruction:")
         try:
             instruction = input("> ")
@@ -2159,6 +2160,19 @@ def main():
             if instruction.strip() == "/restart":
                 print("🔄 Restarting with current settings...")
                 restart_with_current_settings(selected_mode, selected_provider, selected_model, debug_mode, max_iterations=None)
+            if instruction.strip() == "/KG":
+                print("⚠️ /KG command can only be used to resume a task after a timeout.")
+                print("   Please run a task first, then use /KG if it times out.")
+                instruction = read_next_instruction("> ")
+                if instruction.lower() in ['quit', 'exit', 'q']:
+                    print("Exiting...")
+                    sys.exit(0)
+                if instruction.strip() == "/restart":
+                    print("🔄 Restarting with current settings...")
+                    restart_with_current_settings(selected_mode, selected_provider, selected_model, debug_mode, max_iterations=None)
+                if not instruction.strip():
+                    print("No instruction provided. Exiting...")
+                    sys.exit(0)
             if not instruction.strip():
                 print("No instruction provided. Exiting...")
                 sys.exit(0)
@@ -2314,13 +2328,16 @@ def main():
                             agent.engine.terminal_history.clear_session()
                             print("✅ Terminal logs cleared.")
                         print("✅ Conversation history and terminal logs cleared.")
-                        instruction = read_next_instruction("\nEnter your instruction (or 'quit' to exit, '/reset' to clear context, '/restart' to restart):\n> ")
+                        instruction = read_next_instruction("\nEnter your instruction (or 'quit' to exit, '/reset' to clear context, '/restart' to restart, '/KG' to resume after timeout):\n> ")
                         if instruction.lower() in ['quit', 'exit', 'q']:
                             print("Exiting...")
                             sys.exit(0)
                         if instruction.strip() == "/restart":
                             print("🔄 Restarting with current settings...")
                             restart_with_current_settings(selected_mode, selected_provider, selected_model, debug_mode, max_iterations)
+                        if instruction.strip() == "/KG":
+                            print("⚠️ /KG command can only be used to resume a task after a timeout.")
+                            print("   Please run a task first, then use /KG if it times out.")
                         if not instruction.strip():
                             print("No instruction provided. Exiting...")
                             sys.exit(0)
@@ -2360,17 +2377,67 @@ def main():
                             if agent.engine and hasattr(agent.engine, 'terminal_history'):
                                 agent.engine.terminal_history.clear_session()
                             print("✅ Current task cancelled. Conversation history and terminal logs cleared.")
-                            instruction = read_next_instruction("\nEnter your instruction (or 'quit' to exit, '/reset' to clear context, '/restart' to restart):\n> ")
+                            instruction = read_next_instruction("\nEnter your instruction (or 'quit' to exit, '/reset' to clear context, '/restart' to restart, '/KG' to resume after timeout):\n> ")
                             if instruction.lower() in ['quit', 'exit', 'q']:
                                 print("Exiting...")
                                 sys.exit(0)
                             if instruction.strip() == "/restart":
                                 print("🔄 Restarting with current settings...")
                                 restart_with_current_settings(selected_mode, selected_provider, selected_model, debug_mode, max_iterations)
+                            if instruction.strip() == "/KG":
+                                print("⚠️ /KG command can only be used to resume a task after a timeout.")
+                                print("   Please run a task first, then use /KG if it times out.")
                             if not instruction.strip():
                                 print("No instruction provided. Exiting...")
                                 sys.exit(0)
                             break
+                        if latest_instruction == "/KG":
+                            # Keep Going command - resume last task after timeout
+                            if not hasattr(agent.engine, '_last_failed_instruction'):
+                                print("⚠️ No previous timed-out task to resume.")
+                                print("   /KG can only be used after a task has timed out.")
+                                continue
+                            
+                            # Resume last failed instruction
+                            last_instruction = agent.engine._last_failed_instruction
+                            last_conversation_history = getattr(agent.engine, '_last_failed_conversation_history', conversation_history)
+                            
+                            print("🔄 Resuming task after timeout...")
+                            current_cancel_event.set()
+                            agent.engine.request_cancel()
+                            
+                            # Create a clean conversation history that removes timeout traces
+                            # Remove the last assistant message that contained timeout information
+                            clean_conversation_history = ConversationHistory(user_id=0, max_length=50)
+                            if last_conversation_history and hasattr(last_conversation_history, 'messages'):
+                                # Copy all messages except the last one (which contains timeout info)
+                                for i, msg in enumerate(last_conversation_history.messages):
+                                    if i < len(last_conversation_history.messages) - 1:
+                                        clean_conversation_history.messages.append(msg)
+                            
+                            # Add the user instruction again to restart cleanly
+                            clean_conversation_history.add_message("user", last_instruction)
+                            
+                            # Start task again with extended timeout and cleaned context
+                            kg_options = options.copy()
+                            kg_options["task_timeout"] = options.get("task_timeout", 7200) * 2  # Double the timeout
+                            
+                            def start_kg_instruction():
+                                cancel_event = threading.Event()
+                                clean_conversation_history.add_message("user", last_instruction)
+                                future = executor.submit(
+                                    agent.run,
+                                    last_instruction,
+                                    kg_options,
+                                    clean_conversation_history,
+                                    cancel_event,
+                                )
+                                return future, cancel_event, last_instruction
+                            
+                            current_future, current_cancel_event, _ = start_kg_instruction()
+                            print("\n✅ Task resumed seamlessly - continuing as if timeout never occurred...")
+                            print("   Extended timeout applied. Type a new prompt and press Enter to cancel and switch tasks.")
+                            continue
                         if not latest_instruction:
                             continue
 
@@ -2391,13 +2458,16 @@ def main():
                             if last_output:
                                 conversation_history.add_message("assistant", last_output)
 
-                        instruction = read_next_instruction("\nEnter your instruction (or 'quit' to exit, '/reset' to clear context, '/restart' to restart):\n> ")
+                        instruction = read_next_instruction("\nEnter your instruction (or 'quit' to exit, '/reset' to clear context, '/restart' to restart, '/KG' to resume after timeout):\n> ")
                         if instruction.lower() in ['quit', 'exit', 'q']:
                             print("Exiting...")
                             sys.exit(0)
                         if instruction.strip() == "/restart":
                             print("🔄 Restarting with current settings...")
                             restart_with_current_settings(selected_mode, selected_provider, selected_model, debug_mode, max_iterations)
+                        if instruction.strip() == "/KG":
+                            print("⚠️ /KG command can only be used to resume a task after a timeout.")
+                            print("   Please run a task first, then use /KG if it times out.")
                         if not instruction.strip():
                             print("No instruction provided. Exiting...")
                             sys.exit(0)
