@@ -117,17 +117,26 @@ class DependencyChecker:
             return False, f"pip upgrade error: {str(e)}"
     
     def check_network_connectivity(self) -> Tuple[bool, str]:
-        """Check if network connectivity is available"""
-        try:
-            # Try to connect to PyPI
-            socket.create_connection(("pypi.org", 443), timeout=10)
-            return True, "Network connectivity OK ✓"
-        except socket.gaierror:
-            return False, "DNS resolution failed - check internet connection ✗"
-        except socket.timeout:
-            return False, "Network timeout - check internet connection ✗"
-        except Exception as e:
-            return False, f"Network check failed: {str(e)} ✗"
+        """Check if network connectivity is available with multiple fallbacks"""
+        test_hosts = [
+            ("pypi.org", 443),      # Primary PyPI
+            ("pypi.org", 80),       # PyPI HTTP fallback
+            ("google.com", 443),    # Backup test
+            ("github.com", 443),    # Another backup
+        ]
+        
+        for host, port in test_hosts:
+            try:
+                socket.create_connection((host, port), timeout=5)
+                return True, f"Network connectivity OK (via {host}) ✓"
+            except socket.gaierror:
+                continue  # Try next host
+            except socket.timeout:
+                continue  # Try next host
+            except Exception:
+                continue  # Try next host
+        
+        return False, "Network connectivity failed - check internet connection ✗"
     
     def check_virtual_env(self) -> Tuple[bool, str]:
         """Check if running in virtual environment"""
@@ -286,7 +295,7 @@ class DependencyChecker:
         return results
 
     def install_package(self, package: str, retries: int = 3, use_venv: bool = True) -> Tuple[bool, str]:
-        """Install a package using pip with retry mechanism - VENV ONLY MODE"""
+        """Install a package using pip with enhanced retry mechanism - VENV ONLY MODE"""
         # Enforce virtual environment usage
         if not use_venv:
             return False, "System Python installation is not allowed. Virtual environment is required."
@@ -306,52 +315,84 @@ class DependencyChecker:
         if not pip_cmd:
             return False, "Virtual environment pip not available. Please recreate the virtual environment."
         
-        for attempt in range(retries):
-            try:
-                if attempt > 0:
-                    print(f"🔄 Retry {attempt + 1}/{retries} for {package}...")
-                else:
-                    print(f"📦 Installing {package}...")
-                
-                result = subprocess.run(
-                    pip_cmd + ["install", package],
-                    capture_output=True,
-                    text=True,
-                    timeout=300  # 5 minute timeout
-                )
-                
-                if result.returncode == 0:
-                    return True, f"Successfully installed {package}"
-                else:
-                    error_msg = result.stderr.strip()
-                    # Check for common issues and provide specific guidance
-                    if "Permission denied" in error_msg:
-                        if use_venv and python_exe:
-                            return False, f"Permission denied installing {package}. Virtual environment may have permission issues."
-                        else:
-                            return False, f"Permission denied installing {package}. Try using --user flag or virtual environment."
-                    elif "Could not find a version" in error_msg:
-                        return False, f"Package {package} not found or version incompatible."
-                    elif "Network is unreachable" in error_msg or "Connection failed" in error_msg:
-                        return False, f"Network error installing {package}. Check internet connection."
-                    elif attempt == retries - 1:
-                        return False, f"Failed to install {package} after {retries} attempts: {error_msg}"
-                    else:
-                        time.sleep(2)  # Wait before retry
-                        continue
-                        
-            except subprocess.TimeoutExpired:
-                if attempt == retries - 1:
-                    return False, f"Installation of {package} timed out after {retries} attempts"
-                time.sleep(5)  # Wait longer before retry
-                continue
-            except Exception as e:
-                if attempt == retries - 1:
-                    return False, f"Error installing {package}: {str(e)}"
-                time.sleep(2)
-                continue
+        # Enhanced installation with multiple strategies
+        install_strategies = [
+            [package],  # Standard install
+            ["--no-cache-dir", package],  # No cache
+            ["--timeout", "60", package],  # Shorter timeout
+            ["--index-url", "https://pypi.org/simple/", package],  # Explicit index
+        ]
         
-        return False, f"Failed to install {package} after {retries} attempts"
+        for strategy_idx, install_args in enumerate(install_strategies):
+            for attempt in range(retries):
+                try:
+                    if attempt > 0:
+                        wait_time = min(2 ** attempt, 10)  # Exponential backoff
+                        print(f"🔄 Retry {attempt + 1}/{retries} for {package} (strategy {strategy_idx + 1})...")
+                        time.sleep(wait_time)
+                    else:
+                        if strategy_idx == 0:
+                            print(f"📦 Installing {package}...")
+                        else:
+                            print(f"🔄 Trying alternative installation for {package} (strategy {strategy_idx + 1})...")
+                    
+                    # Add verbosity for debugging on retry
+                    if attempt > 0:
+                        install_args = ["-v"] + install_args
+                    
+                    result = subprocess.run(
+                        pip_cmd + ["install"] + install_args,
+                        capture_output=True,
+                        text=True,
+                        timeout=300  # 5 minute timeout
+                    )
+                    
+                    if result.returncode == 0:
+                        return True, f"Successfully installed {package}"
+                    else:
+                        error_msg = result.stderr.strip()
+                        
+                        # Check for common issues and provide specific guidance
+                        if "Permission denied" in error_msg:
+                            return False, f"Permission denied installing {package}. Virtual environment may have permission issues."
+                        elif "Could not find a version" in error_msg or "404" in error_msg:
+                            return False, f"Package {package} not found or version incompatible."
+                        elif "Network is unreachable" in error_msg or "Connection failed" in error_msg or "SSL" in error_msg:
+                            if strategy_idx < len(install_strategies) - 1:
+                                print(f"⚠️ Network issue, trying next strategy...")
+                                break  # Try next strategy
+                            elif attempt == retries - 1:
+                                return False, f"Network error installing {package} after all strategies. Check internet connection."
+                            else:
+                                continue
+                        elif "timeout" in error_msg.lower():
+                            if strategy_idx < len(install_strategies) - 1:
+                                print(f"⚠️ Timeout, trying next strategy...")
+                                break  # Try next strategy
+                            elif attempt == retries - 1:
+                                return False, f"Installation of {package} timed out after all strategies."
+                            else:
+                                continue
+                        elif attempt == retries - 1 and strategy_idx == len(install_strategies) - 1:
+                            return False, f"Failed to install {package} after all strategies and retries: {error_msg[:200]}"
+                        else:
+                            continue
+                        
+                except subprocess.TimeoutExpired:
+                    if strategy_idx < len(install_strategies) - 1:
+                        print(f"⚠️ Timeout, trying next strategy...")
+                        break  # Try next strategy
+                    elif attempt == retries - 1:
+                        return False, f"Installation of {package} timed out after all strategies."
+                    else:
+                        continue
+                except Exception as e:
+                    if attempt == retries - 1 and strategy_idx == len(install_strategies) - 1:
+                        return False, f"Error installing {package}: {str(e)}"
+                    else:
+                        continue
+        
+        return False, f"Failed to install {package} after all installation strategies"
 
     def install_requirements_file(self, retries: int = 2, use_venv: bool = True) -> Tuple[bool, str]:
         """Install all dependencies from requirements.txt with retry - VENV ONLY MODE"""

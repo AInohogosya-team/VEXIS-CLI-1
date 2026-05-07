@@ -123,7 +123,7 @@ class SDKInstaller:
         return missing
     
     def install_sdk(self, provider: str, interactive: bool = True) -> bool:
-        """Install SDK for a specific provider"""
+        """Install SDK for a specific provider with enhanced error handling"""
         if provider not in PROVIDER_SDKS:
             logger.error(f"Unknown provider: {provider}")
             return False
@@ -149,38 +149,76 @@ class SDKInstaller:
         
         print(f"🔄 Installing {sdk_info['package']}...")
         
-        try:
-            result = subprocess.run(
-                sdk_info["install_command"].split(),
-                capture_output=True,
-                text=True,
-                timeout=300  # 5 minute timeout
-            )
-            
-            if result.returncode == 0:
-                print(f"✅ Successfully installed {sdk_info['package']}")
+        # Enhanced installation with multiple strategies
+        install_strategies = [
+            sdk_info["install_command"].split(),  # Original command
+            ["pip", "install", "--no-cache-dir", sdk_info["package"]],  # No cache
+            ["pip", "install", "--timeout", "60", sdk_info["package"]],  # Shorter timeout
+        ]
+        
+        for strategy_idx, install_cmd in enumerate(install_strategies):
+            try:
+                if strategy_idx > 0:
+                    print(f"🔄 Trying alternative installation strategy {strategy_idx + 1}...")
                 
-                # Verify installation
-                if self.check_sdk_availability(provider):
-                    print(f"✅ SDK for {provider} is now available")
-                    return True
+                result = subprocess.run(
+                    install_cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=300  # 5 minute timeout
+                )
+                
+                if result.returncode == 0:
+                    print(f"✅ Successfully installed {sdk_info['package']}")
+                    
+                    # Verify installation
+                    if self.check_sdk_availability(provider):
+                        print(f"✅ SDK for {provider} is now available")
+                        return True
+                    else:
+                        print(f"⚠️ Installation completed but SDK still not available")
+                        return False
                 else:
-                    print(f"⚠️ Installation completed but SDK still not available")
-                    return False
-            else:
-                print(f"❌ Failed to install {sdk_info['package']}")
-                print(f"   Error: {result.stderr}")
-                self.failed_installs.add(provider)
-                return False
-                
-        except subprocess.TimeoutExpired:
-            print(f"❌ Installation timed out for {sdk_info['package']}")
-            self.failed_installs.add(provider)
-            return False
-        except Exception as e:
-            print(f"❌ Installation failed: {e}")
-            self.failed_installs.add(provider)
-            return False
+                    error_msg = result.stderr.strip()
+                    
+                    # Check for common issues
+                    if "Permission denied" in error_msg:
+                        print(f"❌ Permission denied installing {sdk_info['package']}")
+                        print("   Try running in a virtual environment or check permissions")
+                        break  # Don't retry permission errors
+                    elif "Could not find a version" in error_msg or "404" in error_msg:
+                        print(f"❌ Package {sdk_info['package']} not found or incompatible")
+                        break  # Don't retry package not found
+                    elif "Network is unreachable" in error_msg or "Connection failed" in error_msg or "SSL" in error_msg:
+                        if strategy_idx < len(install_strategies) - 1:
+                            print(f"⚠️ Network issue, trying next strategy...")
+                            continue
+                        else:
+                            print(f"❌ Network error installing {sdk_info['package']}")
+                            print("   Check your internet connection")
+                    elif strategy_idx < len(install_strategies) - 1:
+                        print(f"⚠️ Installation failed, trying next strategy...")
+                        continue
+                    else:
+                        print(f"❌ Failed to install {sdk_info['package']}")
+                        print(f"   Error: {error_msg[:200]}")
+                        
+            except subprocess.TimeoutExpired:
+                if strategy_idx < len(install_strategies) - 1:
+                    print(f"⚠️ Installation timed out, trying next strategy...")
+                    continue
+                else:
+                    print(f"❌ Installation timed out for {sdk_info['package']}")
+            except Exception as e:
+                if strategy_idx < len(install_strategies) - 1:
+                    print(f"⚠️ Installation error, trying next strategy...")
+                    continue
+                else:
+                    print(f"❌ Installation failed: {e}")
+        
+        # All strategies failed
+        self.failed_installs.add(provider)
+        return False
     
     def install_missing_sdks(self, providers: List[str], interactive: bool = True) -> Dict[str, bool]:
         """Install missing SDKs for multiple providers"""

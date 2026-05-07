@@ -369,7 +369,8 @@ def install_dependencies():
     # Install from requirements files if they exist
     requirements_files = [
         project_root / "requirements-core.txt",
-        project_root / "requirements.txt"  # fallback to original
+        project_root / "requirements.txt",  # main requirements
+        project_root / "requirements-optional.txt"  # optional cloud SDKs
     ]
     
     for requirements_file in requirements_files:
@@ -386,12 +387,19 @@ def install_dependencies():
                     if result.returncode == 0:
                         print(f"✓ {requirements_file.name} installed")
                         
-                        # If we successfully installed core requirements, we're done
+                        # Handle different requirements files appropriately
                         if requirements_file.name == "requirements-core.txt":
                             print("✓ Core dependencies installed successfully")
                             print("Note: Optional ML/AI dependencies can be installed later with:")
                             print("  pip install -r requirements-optional.txt")
                             return True  # Success, exit the function
+                        elif requirements_file.name == "requirements.txt":
+                            print("✓ Main dependencies installed successfully")
+                            # Continue to optional dependencies
+                            continue
+                        elif requirements_file.name == "requirements-optional.txt":
+                            print("✓ Optional cloud SDKs installed successfully")
+                            return True  # All done
                         break
                     else:
                         error_msg = result.stderr.strip()
@@ -408,13 +416,20 @@ def install_dependencies():
                             else:
                                 print("See error message above for details.")
                             
-                            # If this was requirements-core.txt that failed, return False
-                            # If it was requirements.txt that failed, we can continue (it's optional)
+                            # Handle failure based on file type
                             if requirements_file.name == "requirements-core.txt":
-                                return False
-                            else:
-                                print("Continuing without optional dependencies...")
-                                return True  # Continue without optional deps
+                                return False  # Critical failure
+                            elif requirements_file.name == "requirements.txt":
+                                print("⚠️ Main requirements failed, trying core requirements...")
+                                # Try core requirements as fallback
+                                core_file = project_root / "requirements-core.txt"
+                                if core_file.exists():
+                                    continue  # Try next file (core)
+                                else:
+                                    return False
+                            elif requirements_file.name == "requirements-optional.txt":
+                                print("⚠️ Optional cloud SDKs failed to install, continuing...")
+                                return True  # Optional failure is OK
                         else:
                             print(f"{requirements_file.name} attempt {attempt + 1} failed, retrying...")
                 except subprocess.TimeoutExpired:
