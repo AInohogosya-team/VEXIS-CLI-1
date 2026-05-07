@@ -837,12 +837,11 @@ def configure_google_provider():
     # Check if API key already exists
     if not settings_manager.has_google_api_key():
         # Prompt for API key
-        result = prompt_for_google_api_key()
-        if result is None:
+        api_key = prompt_for_google_api_key()
+        if api_key is None:
             return None, None
         
-        api_key, should_save = result
-        settings_manager.set_google_api_key(api_key, should_save)
+        settings_manager.set_google_api_key(api_key)
     
     
     # Select model

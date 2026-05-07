@@ -128,6 +128,7 @@ class TerminalHistory:
             # SECURITY FIX: Start from user's home directory instead of root (/)
             # to prevent unrestricted filesystem access
             self._current_directory = Path.home()
+            self._previous_directory = None  # For cd - command support
             self.terminal_session = TerminalSession(
                 session_id=self.session_id,
                 start_time=time.time(),
@@ -378,7 +379,6 @@ class TerminalHistory:
             if self._platform == "windows":
                 # On Windows, use cmd.exe /c with command list (no shell=True)
                 # shlex.split with posix=False handles Windows quoting properly
-                import shlex
                 cmd_parts = shlex.split(command, posix=False)
                 result = subprocess.run(
                     ['cmd.exe', '/c'] + cmd_parts,
@@ -435,7 +435,6 @@ class TerminalHistory:
             self.logger.error(f"Unicode decode error in command output: {e}")
             # Retry with error handling - use the same secure approach
             try:
-                import shlex
                 if self._platform == "windows":
                     cmd_parts = shlex.split(command, posix=False)
                     result = subprocess.run(

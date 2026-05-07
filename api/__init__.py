@@ -223,7 +223,7 @@ def create_client(
         "glm": ProviderType.ZHIPUAI,
     }
     
-    return LLMFactory.create(provider_type, api_key=api_key, **kwargs)
+    return LLMFactory.create(provider_map[provider], api_key=api_key, **kwargs)
 
 
 def get_available_providers() -> list:

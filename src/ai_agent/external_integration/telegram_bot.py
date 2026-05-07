@@ -634,8 +634,18 @@ class TelegramBotManager:
 
         return True
     
+    async def _stop_application(self):
+        """Internal method to stop the application from async context."""
+        if self.application:
+            try:
+                await self.application.stop()
+                await self.application.shutdown()
+                self.logger.info("Telegram application stopped and shut down")
+            except Exception as e:
+                self.logger.error(f"Error stopping application: {e}")
+    
     def stop_bot(self):
-        """Stop the Telegram bot"""
+        """Stop the Telegram bot gracefully"""
         self.is_running = False
         self._should_restart = False
         self._stop_queue_processor()
@@ -644,20 +654,24 @@ class TelegramBotManager:
             self.logger.info("Stopping Telegram bot...")
             if self.application.running:
                 try:
+                    # Try to get the running loop (if we're in an async context)
                     loop = asyncio.get_running_loop()
-                    loop.create_task(self.application.stop())
-                    loop.create_task(self.application.shutdown())
+                    # Schedule stop on the running loop
+                    loop.call_soon_threadsafe(lambda: asyncio.create_task(self._stop_application()))
                 except RuntimeError:
-                    asyncio.run(self.application.stop())
-                    asyncio.run(self.application.shutdown())
+                    # No running loop - we're in a sync context
+                    # The application will stop when run_polling returns
+                    # Just signal that we want to stop
+                    self.logger.info("No running event loop, bot will stop on next polling cycle")
 
 
-def create_telegram_bot(config_path: Optional[str] = None) -> Optional[TelegramBotManager]:
+def create_telegram_bot(config_path: Optional[str] = None, terminal_history=None) -> Optional[TelegramBotManager]:
     """
     Create a Telegram bot manager from configuration
     
     Args:
         config_path: Path to config.yaml file. If None, loads from default location.
+        terminal_history: Optional TerminalHistory instance for command execution.
         
     Returns:
         TelegramBotManager instance or None if telegram is disabled or not available
@@ -671,35 +685,58 @@ def create_telegram_bot(config_path: Optional[str] = None) -> Optional[TelegramB
     try:
         import yaml
         from pathlib import Path
+        from ..core_processing.terminal_history import get_terminal_history
+        
+        # Use provided terminal_history or get default
+        if terminal_history is None:
+            terminal_history = get_terminal_history()
+        
         
         # Load config directly from YAML to avoid singleton cache
+        config_dict = {}
         if config_path and Path(config_path).exists():
             with open(config_path, 'r') as f:
-                config_dict = yaml.safe_load(f)
+                config_dict = yaml.safe_load(f) or {}
+        
+        
+        # If config_dict is empty or telegram section not found, try Config object
+        telegram_config = None
+        if config_dict.get('telegram'):
+            telegram_config = config_dict['telegram']
         else:
             # Fallback to default config loading
             config_obj = load_config()
-            config_dict = config_obj.__dict__ if hasattr(config_obj, '__dict__') else {}
+            if hasattr(config_obj, 'telegram'):
+                # telegram is a TelegramConfig dataclass
+                telegram_config = config_obj.telegram
+                # Convert dataclass to dict if needed
+                if hasattr(telegram_config, '__dataclass_fields__'):
+                    from dataclasses import asdict
+                    telegram_config = asdict(telegram_config)
+                elif hasattr(telegram_config, '__dict__'):
+                    telegram_config = telegram_config.__dict__
         
-        # Extract telegram config
-        telegram_dict = config_dict.get('telegram', {})
+        # If still no telegram config, return None
+        if not telegram_config:
+            telegram_config = {}
         
-        if not telegram_dict.get('enabled', False):
+        if not telegram_config.get('enabled', False):
             return None
         
-        bot_token = telegram_dict.get('bot_token', '')
+        bot_token = telegram_config.get('bot_token', '')
         if not bot_token:
             print("⚠️ Telegram bot token not configured")
             print("Please set bot_token in config.yaml under telegram section")
             return None
         
-        allowed_user_ids = telegram_dict.get('allowed_user_ids', [])
-        max_history_length = telegram_dict.get('max_history_length', 50)
+        allowed_user_ids = telegram_config.get('allowed_user_ids', [])
+        max_history_length = telegram_config.get('max_history_length', 50)
         
         return TelegramBotManager(
             bot_token=bot_token,
             allowed_user_ids=allowed_user_ids,
-            max_history_length=max_history_length
+            max_history_length=max_history_length,
+            terminal_history=terminal_history
         )
     except Exception as e:
         print(f"⚠️ Error loading Telegram configuration: {e}")

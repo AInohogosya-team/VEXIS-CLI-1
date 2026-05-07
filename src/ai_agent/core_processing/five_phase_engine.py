@@ -941,8 +941,6 @@ class FivePhaseEngine:
             
             return os_info
             
-        except PipelineCancelledError:
-            raise
         except Exception as e:
             self.logger.warning(f"Failed to get OS info: {e}")
             return "Unknown OS"
